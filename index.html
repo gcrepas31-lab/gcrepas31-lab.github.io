@@ -7,7 +7,7 @@
   <meta name="description" content="FixtureGo: organizá fixtures de pádel (americanas, ligas y torneos) y, pronto, prodes y otros deportes. Todo desde el móvil.">
   <meta property="og:title" content="FixtureGo">
   <meta property="og:description" content="Americanas, ligas, torneos y más. Tu fixture, listo para jugar.">
-  <meta property="og:image" content="https://gcrepas31-lab.github.io/logo.png">
+  <meta property="og:image" content="https://fixturego.com/logo.png">
   <meta property="og:type" content="website">
   <link rel="icon" href="logo.png" type="image/png">
   <style>
@@ -70,29 +70,36 @@
     }
     .product h2 { font-size: 1.35rem; margin-bottom: 8px; }
     .product p { color: var(--muted); font-size: 0.98rem; }
-    .features {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 16px; margin-top: 28px;
-    }
-    .feature {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 18px; padding: 24px;
-    }
-    .feature .icon { font-size: 1.8rem; }
-    .feature h3 { font-size: 1.05rem; margin: 10px 0 6px; }
-    .feature p { color: var(--muted); font-size: 0.95rem; }
     .section-title {
       text-align: center; margin-top: 72px; margin-bottom: 8px;
       font-size: 1.4rem;
     }
     .section-sub {
-      text-align: center; color: var(--muted); margin-bottom: 8px;
+      text-align: center; color: var(--muted); margin-bottom: 24px;
     }
+    .steps, .features, .faq {
+      display: grid; gap: 16px;
+    }
+    .steps { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .features { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+    .step, .feature, .faq-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 18px; padding: 24px;
+    }
+    .step .num {
+      display: inline-flex; width: 36px; height: 36px; border-radius: 50%;
+      align-items: center; justify-content: center;
+      background: var(--accent); color: #0b1f2e; font-weight: 800; margin-bottom: 12px;
+    }
+    .feature .icon { font-size: 1.8rem; }
+    .step h3, .feature h3, .faq-item h3 { font-size: 1.05rem; margin: 8px 0 6px; }
+    .step p, .feature p, .faq-item p { color: var(--muted); font-size: 0.95rem; }
+    .faq { max-width: 720px; margin: 0 auto; }
     footer {
       text-align: center; color: var(--muted); font-size: 0.85rem;
       padding: 48px 24px 32px;
     }
-    footer a { color: var(--muted); }
+    footer a { color: var(--muted); margin: 0 8px; }
   </style>
 </head>
 <body>
@@ -121,6 +128,26 @@
       </article>
     </section>
 
+    <h2 class="section-title">Cómo funciona</h2>
+    <p class="section-sub">Tres pasos y estás en la cancha</p>
+    <section class="steps">
+      <article class="step">
+        <div class="num">1</div>
+        <h3>Cargá los jugadores</h3>
+        <p>Elegí quién juega, las pistas y el tipo de americana o evento.</p>
+      </article>
+      <article class="step">
+        <div class="num">2</div>
+        <h3>La app arma las rondas</h3>
+        <p>Parejas y partidos se generan solos. Vos solo cargás los resultados.</p>
+      </article>
+      <article class="step">
+        <div class="num">3</div>
+        <h3>Mirá el ranking</h3>
+        <p>Tabla en vivo, podio y estadísticas para compartir con el grupo.</p>
+      </article>
+    </section>
+
     <h2 class="section-title">En FixtureGo Padel</h2>
     <p class="section-sub">Todo lo que necesitás para armar el partido</p>
     <section class="features">
@@ -145,10 +172,39 @@
         <p>Visualizá resultados, podios y clasificaciones completas de cada evento.</p>
       </article>
     </section>
+
+    <h2 class="section-title">Preguntas frecuentes</h2>
+    <p class="section-sub">Lo que más nos preguntan</p>
+    <section class="faq">
+      <article class="faq-item">
+        <h3>¿Qué es un americano de pádel?</h3>
+        <p>Un formato social donde las parejas rotan entre rondas. Todos juegan con casi todos y se suman puntos individuales.</p>
+      </article>
+      <article class="faq-item">
+        <h3>¿Para cuántos jugadores sirve?</h3>
+        <p>Desde pocos jugadores hasta grupos grandes, según pistas disponibles. La app arma las rondas según la cantidad que elijas.</p>
+      </article>
+      <article class="faq-item">
+        <h3>¿Es gratis?</h3>
+        <p>Sí, podés usarla gratis con anuncios. También hay Premium para quitar anuncios y desbloquear beneficios.</p>
+      </article>
+      <article class="faq-item">
+        <h3>¿Necesito internet?</h3>
+        <p>Los eventos y resultados viven en tu móvil. Internet se usa para anuncios, Premium y actualizaciones.</p>
+      </article>
+      <article class="faq-item">
+        <h3>¿Qué es FixtureGo?</h3>
+        <p>La marca paraguas. FixtureGo Padel es la app de pádel; más adelante sumamos prodes y otros fixtures.</p>
+      </article>
+    </section>
   </main>
 
   <footer>
-    © 2026 FixtureGo · <a href="https://play.google.com/store/apps/details?id=com.gopadel.americano">App en Google Play</a>
+    <a href="/privacidad.html">Privacidad</a>
+    <a href="/contacto.html">Contacto</a>
+    <a href="https://play.google.com/store/apps/details?id=com.gopadel.americano">Google Play</a>
+    <br><br>
+    © 2026 FixtureGo
   </footer>
 </body>
 </html>

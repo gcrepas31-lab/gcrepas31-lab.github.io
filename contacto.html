@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contacto — FixtureGo</title>
+  <meta name="description" content="Contactá con FixtureGo.">
+  <link rel="icon" href="logo.png" type="image/png">
+  <style>
+    :root {
+      --bg: #0b1f2e; --bg2: #0f3347; --text: #eef4f8; --muted: #a9bfcc;
+      --accent: #7ed957; --card: rgba(255,255,255,0.06); --border: rgba(255,255,255,0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 50% 0%, var(--bg2) 0%, var(--bg) 70%) fixed;
+      line-height: 1.6; min-height: 100vh;
+    }
+    header, main, footer { max-width: 720px; margin: 0 auto; padding: 24px; }
+    header a, footer a { color: var(--accent); text-decoration: none; }
+    h1 { font-size: 1.8rem; margin: 16px 0 12px; }
+    p { color: var(--muted); margin-bottom: 16px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 18px; padding: 28px; margin-top: 24px;
+    }
+    .card a.mail {
+      display: inline-block; margin-top: 8px;
+      color: #0b1f2e; background: var(--accent); font-weight: 700;
+      padding: 12px 22px; border-radius: 999px; text-decoration: none;
+    }
+    footer { color: var(--muted); font-size: 0.85rem; padding-bottom: 48px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/">← FixtureGo</a>
+    <h1>Contacto</h1>
+  </header>
+  <main>
+    <p>¿Dudas, ideas o problemas con la app? Escribinos y te respondemos.</p>
+    <div class="card">
+      <p>Email</p>
+      <p><strong style="color:#eef4f8">gcrepas31@gmail.com</strong></p>
+      <a class="mail" href="mailto:gcrepas31@gmail.com">Enviar email</a>
+    </div>
+    <p style="margin-top:28px">
+      También podés dejar una reseña en
+      <a href="https://play.google.com/store/apps/details?id=com.gopadel.americano" style="color:#7ed957">Google Play</a>.
+    </p>
+  </main>
+  <footer>
+    <a href="/">Inicio</a> ·
+    <a href="/privacidad.html">Privacidad</a> ·
+    © 2026 FixtureGo
+  </footer>
+</body>
+</html>
