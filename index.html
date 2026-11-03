@@ -91,23 +91,19 @@
     .step p, .feature p, .faq-item p { color: var(--muted); font-size: 0.95rem; }
     .faq { max-width: 720px; margin: 0 auto; }
     .phones {
-      display: flex; justify-content: center; align-items: flex-end;
-      gap: 18px; flex-wrap: wrap; margin-top: 16px;
+      display: flex; justify-content: center; align-items: flex-start;
+      gap: 20px; flex-wrap: wrap; margin-top: 16px;
     }
     .phone {
-      width: 180px; background: #061018; border-radius: 28px;
-      padding: 10px 8px 14px; border: 1px solid var(--border);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
-    }
-    .phone::before {
-      content: ""; display: block; width: 56px; height: 6px;
-      background: #1a3344; border-radius: 999px; margin: 0 auto 8px;
+      width: 200px; margin: 0;
+      background: transparent; border: none; padding: 0;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+      border-radius: 16px; overflow: hidden;
     }
     .phone img {
-      width: 100%; border-radius: 18px; display: block;
-      aspect-ratio: 9/16; object-fit: cover; background: #0b1f2e;
+      width: 100%; height: auto; display: block;
+      vertical-align: top; background: #0b1f2e;
     }
-    .phone.mid { width: 200px; transform: translateY(-8px); }
     footer {
       text-align: center; color: var(--muted); font-size: 0.85rem;
       padding: 48px 24px 32px;
@@ -145,13 +141,13 @@
     <p class="section-sub">Menú, creación de evento y rondas en vivo</p>
     <section class="phones" aria-label="Capturas de la app">
       <figure class="phone">
-        <img src="shots/shot2.webp" alt="Menú principal de FixtureGo Padel" loading="lazy">
-      </figure>
-      <figure class="phone mid">
-        <img src="shots/shot4.webp" alt="Rondas y marcadores en vivo" loading="lazy">
+        <img src="shots/shot2.webp" alt="Menú principal de FixtureGo Padel" loading="lazy" width="720" height="1280">
       </figure>
       <figure class="phone">
-        <img src="shots/shot3.webp" alt="Creación de un evento" loading="lazy">
+        <img src="shots/shot4.webp" alt="Rondas y marcadores en vivo" loading="lazy" width="720" height="1280">
+      </figure>
+      <figure class="phone">
+        <img src="shots/shot3.webp" alt="Creación de un evento" loading="lazy" width="720" height="1280">
       </figure>
     </section>
 
