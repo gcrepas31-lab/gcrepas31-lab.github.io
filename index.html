@@ -7,9 +7,9 @@
   <meta name="description" content="FixtureGo: organizá fixtures de pádel (americanas, ligas y torneos) y, pronto, prodes y otros deportes. Todo desde el móvil.">
   <meta property="og:title" content="FixtureGo">
   <meta property="og:description" content="Americanas, ligas, torneos y más. Tu fixture, listo para jugar.">
-  <meta property="og:image" content="https://fixturego.com/logo.png">
+  <meta property="og:image" content="https://fixturego.com/logo-fg.svg">
   <meta property="og:type" content="website">
-  <link rel="icon" href="logo.png" type="image/png">
+  <link rel="icon" href="logo-fg.svg" type="image/svg+xml">
   <style>
     :root {
       --bg: #0b1f2e;
@@ -31,13 +31,8 @@
     main { max-width: 960px; margin: 0 auto; padding: 56px 24px 32px; }
     .hero { text-align: center; }
     .brand {
-      display: inline-flex; align-items: center; justify-content: center;
       width: 128px; height: 128px; border-radius: 28px;
-      background: linear-gradient(145deg, #143a52, #0b1f2e);
-      border: 1px solid var(--border);
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-      font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em;
-      color: var(--accent);
     }
     h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); margin-top: 24px; letter-spacing: -0.03em; }
     .tagline { color: var(--muted); font-size: 1.15rem; max-width: 580px; margin: 12px auto 32px; }
@@ -95,6 +90,24 @@
     .step h3, .feature h3, .faq-item h3 { font-size: 1.05rem; margin: 8px 0 6px; }
     .step p, .feature p, .faq-item p { color: var(--muted); font-size: 0.95rem; }
     .faq { max-width: 720px; margin: 0 auto; }
+    .phones {
+      display: flex; justify-content: center; align-items: flex-end;
+      gap: 18px; flex-wrap: wrap; margin-top: 16px;
+    }
+    .phone {
+      width: 180px; background: #061018; border-radius: 28px;
+      padding: 10px 8px 14px; border: 1px solid var(--border);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    .phone::before {
+      content: ""; display: block; width: 56px; height: 6px;
+      background: #1a3344; border-radius: 999px; margin: 0 auto 8px;
+    }
+    .phone img {
+      width: 100%; border-radius: 18px; display: block;
+      aspect-ratio: 9/16; object-fit: cover; background: #0b1f2e;
+    }
+    .phone.mid { width: 200px; transform: translateY(-8px); }
     footer {
       text-align: center; color: var(--muted); font-size: 0.85rem;
       padding: 48px 24px 32px;
@@ -105,7 +118,7 @@
 <body>
   <main>
     <section class="hero">
-      <div class="brand" aria-hidden="true">FG</div>
+      <img class="brand" src="logo-fg.svg" alt="Logo FixtureGo">
       <h1>FixtureGo</h1>
       <p class="tagline">Tu fixture, listo para jugar. Hoy pádel: americanas, ligas y torneos. Mañana prodes y más deportes.</p>
       <a class="cta" href="https://play.google.com/store/apps/details?id=com.gopadel.americano">
@@ -126,6 +139,20 @@
         <h2>FixtureGo Prode</h2>
         <p>Prodes y predicciones. Arrancamos con el Mundial 2026 y seguimos con más fixtures.</p>
       </article>
+    </section>
+
+    <h2 class="section-title">Así se ve FixtureGo Padel</h2>
+    <p class="section-sub">Menú, creación de evento y rondas en vivo</p>
+    <section class="phones" aria-label="Capturas de la app">
+      <figure class="phone">
+        <img src="shots/shot2.webp" alt="Menú principal de FixtureGo Padel" loading="lazy">
+      </figure>
+      <figure class="phone mid">
+        <img src="shots/shot4.webp" alt="Rondas y marcadores en vivo" loading="lazy">
+      </figure>
+      <figure class="phone">
+        <img src="shots/shot3.webp" alt="Creación de un evento" loading="lazy">
+      </figure>
     </section>
 
     <h2 class="section-title">Cómo funciona</h2>
