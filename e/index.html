@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inscripción · FixtureGo</title>
+  <meta name="description" content="Inscribite a un evento abierto en FixtureGo Padel." />
+  <style>
+    :root {
+      --bg: #0b1f2e;
+      --card: #123049;
+      --text: #f4f7fb;
+      --muted: #9fb3c8;
+      --accent: #7ed957;
+      --chip: #1e4d7a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1a4a6e, var(--bg));
+      color: var(--text);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 20px 48px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 8px; font-weight: 700; }
+    .sub { color: var(--muted); margin: 0 0 28px; text-align: center; max-width: 420px; }
+    .card {
+      width: min(420px, 100%);
+      background: var(--card);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,.35);
+    }
+    .card-head {
+      background: #0e2a40;
+      padding: 16px 18px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .chip {
+      display: inline-block; background: var(--chip); color: #fff;
+      font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+      padding: 4px 10px; border-radius: 999px;
+    }
+    .card-body { padding: 18px; }
+    .title { font-size: 1.25rem; font-weight: 700; margin: 0 0 8px; }
+    .meta { color: var(--muted); font-size: .95rem; margin: 4px 0; }
+    .cta {
+      display: block; margin: 22px 0 10px; text-align: center;
+      background: var(--accent); color: #0b1f2e; font-weight: 700;
+      text-decoration: none; padding: 14px 18px; border-radius: 999px;
+    }
+    .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 0; }
+    .err { color: #ffb4a8; text-align: center; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <h1>Continúa en FixtureGo</h1>
+  <p class="sub">Abrí la app para ver la ficha e inscribirte de forma segura.</p>
+  <div class="card" id="card" hidden>
+    <div class="card-head">
+      <span class="chip" id="typeChip">EVENTO</span>
+      <strong>FixtureGo PADEL</strong>
+    </div>
+    <div class="card-body">
+      <p class="meta" id="when">—</p>
+      <h2 class="title" id="title">Evento</h2>
+      <p class="meta" id="zone"></p>
+      <p class="meta" id="spots"></p>
+      <a class="cta" id="openApp" href="#">Abrir en FixtureGo</a>
+      <p class="note">Si no tenés la app, instálala desde Google Play y volvé a este link.</p>
+    </div>
+  </div>
+  <p class="err" id="err" hidden>No encontramos este evento.</p>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      let id = params.get("id");
+      if (!id) {
+        const parts = location.pathname.split("/").filter(Boolean);
+        const i = parts.indexOf("e");
+        if (i >= 0 && parts[i + 1] && parts[i + 1] !== "index.html") id = parts[i + 1];
+      }
+      const deep = id
+        ? "https://fixturego.com/e/?id=" + encodeURIComponent(id)
+        : "https://fixturego.com/";
+      const openApp = document.getElementById("openApp");
+      openApp.href = deep;
+
+      // Landing liviana: la app tiene la fuente de verdad (local/Firestore).
+      // Mostramos ficha genérica usable con el link.
+      if (!id) {
+        document.getElementById("err").hidden = false;
+        return;
+      }
+      document.getElementById("card").hidden = false;
+      document.getElementById("title").textContent = "Evento " + id.slice(0, 8) + "…";
+      document.getElementById("when").textContent = "Abrí la app para ver fecha, nivel y plazas";
+      document.getElementById("typeChip").textContent = "INSCRIPCIÓN";
+      document.getElementById("spots").textContent = "ID: " + id;
+    })();
+  </script>
+</body>
+</html>
