@@ -56,7 +56,7 @@
 </head>
 <body>
   <h1>Continúa en FixtureGo</h1>
-  <p class="sub">Abrí la app para ver la ficha e inscribirte de forma segura.</p>
+  <p class="sub">Abrí la app para inscribirte. Acá ves la ficha del evento.</p>
   <div class="card" id="card" hidden>
     <div class="card-head">
       <span class="chip" id="typeChip">EVENTO</span>
@@ -65,8 +65,13 @@
     <div class="card-body">
       <p class="meta" id="when">—</p>
       <h2 class="title" id="title">Evento</h2>
+      <p class="meta" id="modality"></p>
       <p class="meta" id="zone"></p>
+      <p class="meta" id="venue"></p>
+      <p class="meta" id="level"></p>
       <p class="meta" id="spots"></p>
+      <p class="meta" id="min"></p>
+      <p class="meta" id="closes"></p>
       <a class="cta" id="openApp" href="#">Abrir en FixtureGo</a>
       <p class="note">Si no tenés la app, instálala desde Google Play y volvé a este link.</p>
     </div>
@@ -76,6 +81,7 @@
     (function () {
       const params = new URLSearchParams(location.search);
       let id = params.get("id");
+      const rawSnap = params.get("d");
       if (!id) {
         const parts = location.pathname.split("/").filter(Boolean);
         const i = parts.indexOf("e");
@@ -84,20 +90,102 @@
       const deep = id
         ? "https://fixturego.com/e/?id=" + encodeURIComponent(id)
         : "https://fixturego.com/";
-      const openApp = document.getElementById("openApp");
-      openApp.href = deep;
+      document.getElementById("openApp").href = deep;
 
-      // Landing liviana: la app tiene la fuente de verdad (local/Firestore).
-      // Mostramos ficha genérica usable con el link.
       if (!id) {
         document.getElementById("err").hidden = false;
         return;
       }
       document.getElementById("card").hidden = false;
-      document.getElementById("title").textContent = "Evento " + id.slice(0, 8) + "…";
-      document.getElementById("when").textContent = "Abrí la app para ver fecha, nivel y plazas";
-      document.getElementById("typeChip").textContent = "INSCRIPCIÓN";
-      document.getElementById("spots").textContent = "ID: " + id;
+
+      const snap = decodeSnapshot(rawSnap);
+      if (snap) {
+        fillFromSnapshot(snap);
+      } else {
+        document.getElementById("title").textContent = "Evento " + id.slice(0, 8) + "…";
+        document.getElementById("when").textContent = "Abrí la app para ver fecha, nivel y plazas";
+        document.getElementById("typeChip").textContent = "INSCRIPCIÓN";
+        document.getElementById("spots").textContent = "ID: " + id;
+      }
+
+      function decodeSnapshot(encoded) {
+        if (!encoded) return null;
+        try {
+          let b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+          while (b64.length % 4) b64 += "=";
+          const text = decodeURIComponent(escape(atob(b64)));
+          const p = text.split("|");
+          if (p.length < 8) return null;
+          return {
+            id: p[0],
+            type: p[1],
+            modality: p[2],
+            title: p[3],
+            startsAt: Number(p[4]) || 0,
+            capacity: Number(p[5]) || 0,
+            minConfirmed: Number(p[6]) || 0,
+            joined: Number(p[7]) || 0,
+            waitlist: Number(p[8]) || 0,
+            zone: p[9] || "",
+            venue: p[10] || "",
+            levelMin: p[11] || "",
+            levelMax: p[12] || "",
+            closesAt: p[13] ? Number(p[13]) : null,
+          };
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function fillFromSnapshot(s) {
+        const typeLabel = s.type === "torneo" ? "TORNEO" : "AMERICANA";
+        document.getElementById("typeChip").textContent = typeLabel;
+        document.getElementById("title").textContent = s.title || "Evento";
+        document.getElementById("when").textContent = s.startsAt
+          ? new Date(s.startsAt).toLocaleString("es", {
+              weekday: "long", day: "numeric", month: "long",
+              hour: "2-digit", minute: "2-digit",
+            })
+          : "—";
+        const modalityMap = {
+          all_vs_all: "Todos vs todos",
+          pairs: "Por parejas",
+          mixed_fixed: "Mixta fija",
+          mixed_rotating: "Mixta rotativa",
+          custom: "Personalizada",
+          ladder: "Escalera",
+        };
+        const modEl = document.getElementById("modality");
+        if (s.type === "americana" && s.modality) {
+          modEl.textContent = modalityMap[s.modality] || s.modality;
+        } else {
+          modEl.hidden = true;
+        }
+        const zoneEl = document.getElementById("zone");
+        if (s.zone) zoneEl.textContent = "Zona: " + s.zone; else zoneEl.hidden = true;
+        const venueEl = document.getElementById("venue");
+        if (s.venue) venueEl.textContent = s.venue; else venueEl.hidden = true;
+        const levelEl = document.getElementById("level");
+        if (s.levelMin && s.levelMax) {
+          levelEl.textContent = "Nivel: " + s.levelMin + "–" + s.levelMax;
+        } else {
+          levelEl.hidden = true;
+        }
+        let spots = s.joined + " de " + s.capacity + " plazas";
+        if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
+        document.getElementById("spots").textContent = spots;
+        document.getElementById("min").textContent =
+          s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
+        const closesEl = document.getElementById("closes");
+        if (s.closesAt) {
+          closesEl.textContent = "Cierra inscripción: " +
+            new Date(s.closesAt).toLocaleString("es", {
+              day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+            });
+        } else {
+          closesEl.hidden = true;
+        }
+      }
     })();
   </script>
 </body>
