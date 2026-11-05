@@ -13,6 +13,7 @@
       --muted: #9fb3c8;
       --accent: #7ed957;
       --chip: #1e4d7a;
+      --danger: #ffb4a8;
     }
     * { box-sizing: border-box; }
     body {
@@ -45,18 +46,35 @@
     .card-body { padding: 18px; }
     .title { font-size: 1.25rem; font-weight: 700; margin: 0 0 8px; }
     .meta { color: var(--muted); font-size: .95rem; margin: 4px 0; }
-    .cta {
-      display: block; margin: 22px 0 10px; text-align: center;
-      background: var(--accent); color: #0b1f2e; font-weight: 700;
-      text-decoration: none; padding: 14px 18px; border-radius: 999px;
+    label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 4px; }
+    input {
+      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #2a5070;
+      background: #0e2a40; color: var(--text); font-size: 1rem;
     }
-    .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 0; }
-    .err { color: #ffb4a8; text-align: center; margin-top: 24px; }
+    input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .btn {
+      display: block; width: 100%; margin: 16px 0 8px; text-align: center;
+      background: var(--accent); color: #0b1f2e; font-weight: 700; border: none;
+      text-decoration: none; padding: 14px 18px; border-radius: 999px; cursor: pointer;
+      font-size: 1rem;
+    }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-secondary {
+      background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    }
+    .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 8px 0 0; }
+    .msg { text-align: center; margin-top: 10px; font-size: .95rem; }
+    .msg.ok { color: var(--accent); }
+    .msg.err { color: var(--danger); }
+    .err-page { color: var(--danger); text-align: center; margin-top: 24px; }
+    #signupForm { margin-top: 8px; }
+    #signupForm[hidden], #openApp[hidden] { display: none !important; }
   </style>
+  <script src="./firebase-config.js"></script>
 </head>
 <body>
-  <h1>Continúa en FixtureGo</h1>
-  <p class="sub">Abrí la app para inscribirte. Acá ves la ficha del evento.</p>
+  <h1>Inscripción FixtureGo</h1>
+  <p class="sub" id="subtitle">Completá tus datos para apuntarte al evento.</p>
   <div class="card" id="card" hidden>
     <div class="card-head">
       <span class="chip" id="typeChip">EVENTO</span>
@@ -72,121 +90,318 @@
       <p class="meta" id="spots"></p>
       <p class="meta" id="min"></p>
       <p class="meta" id="closes"></p>
-      <a class="cta" id="openApp" href="#">Abrir en FixtureGo</a>
-      <p class="note">Si no tenés la app, instálala desde Google Play y volvé a este link.</p>
+
+      <form id="signupForm" hidden>
+        <label for="nameInput">Nombre</label>
+        <input id="nameInput" name="name" autocomplete="name" required maxlength="79" />
+        <label for="emailInput">Email</label>
+        <input id="emailInput" name="email" type="email" autocomplete="email" required />
+        <button class="btn" type="submit" id="submitBtn">Inscribirme</button>
+        <p class="msg" id="formMsg" hidden></p>
+      </form>
+      <p class="note" id="firebaseHint" hidden>
+        La inscripción web se activa cuando el organizador publica con Firebase.
+        Mientras tanto abrí la app.
+      </p>
+      <a class="btn btn-secondary" id="openApp" href="#">Abrir en FixtureGo</a>
+      <p class="note">Si no tenés la app, instálala desde Google Play.</p>
     </div>
   </div>
-  <p class="err" id="err" hidden>No encontramos este evento.</p>
-  <script>
-    (function () {
-      const params = new URLSearchParams(location.search);
-      let id = params.get("id");
-      const rawSnap = params.get("d");
-      if (!id) {
-        const parts = location.pathname.split("/").filter(Boolean);
-        const i = parts.indexOf("e");
-        if (i >= 0 && parts[i + 1] && parts[i + 1] !== "index.html") id = parts[i + 1];
-      }
-      const deep = id
-        ? "https://fixturego.com/e/?id=" + encodeURIComponent(id)
-        : "https://fixturego.com/";
-      document.getElementById("openApp").href = deep;
+  <p class="err-page" id="err" hidden>No encontramos este evento.</p>
 
-      if (!id) {
-        document.getElementById("err").hidden = false;
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import {
+      getAuth, signInAnonymously, onAuthStateChanged,
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc,
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const params = new URLSearchParams(location.search);
+    let eventId = params.get("id");
+    const rawSnap = params.get("d");
+    if (!eventId) {
+      const parts = location.pathname.split("/").filter(Boolean);
+      const i = parts.indexOf("e");
+      if (i >= 0 && parts[i + 1] && parts[i + 1] !== "index.html") eventId = parts[i + 1];
+    }
+
+    const openApp = document.getElementById("openApp");
+    openApp.href = eventId
+      ? "https://fixturego.com/e/?id=" + encodeURIComponent(eventId)
+      : "https://fixturego.com/";
+
+    if (!eventId) {
+      document.getElementById("err").hidden = false;
+      throw new Error("missing id");
+    }
+    document.getElementById("card").hidden = false;
+
+    const cfg = window.FIXTUREGO_FIREBASE;
+    const firebaseReady = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
+
+    let eventState = null;
+    const snap = decodeSnapshot(rawSnap);
+    if (snap) {
+      eventState = snapToState(snap);
+      fillUi(eventState);
+    } else {
+      document.getElementById("title").textContent = "Evento " + eventId.slice(0, 8) + "…";
+      document.getElementById("when").textContent = "Cargando…";
+      document.getElementById("typeChip").textContent = "INSCRIPCIÓN";
+    }
+
+    let db = null;
+    let auth = null;
+
+    if (firebaseReady) {
+      const app = initializeApp(cfg);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      try {
+        const remote = await loadEvent(eventId);
+        if (remote) {
+          eventState = remote;
+          fillUi(eventState);
+          enableForm(true);
+        } else if (snap) {
+          document.getElementById("firebaseHint").hidden = false;
+          document.getElementById("firebaseHint").textContent =
+            "Este link tiene ficha local, pero el evento aún no está en la nube. Pedile al organizador que publique con Firebase, o abrí la app.";
+          enableForm(false);
+        } else {
+          document.getElementById("err").hidden = false;
+          document.getElementById("card").hidden = true;
+        }
+      } catch (e) {
+        console.warn(e);
+        if (snap) {
+          document.getElementById("firebaseHint").hidden = false;
+          enableForm(false);
+        }
+      }
+    } else {
+      document.getElementById("subtitle").textContent =
+        "Ficha del evento. La inscripción online se activa con Firebase.";
+      document.getElementById("firebaseHint").hidden = false;
+      enableForm(false);
+      if (!snap) {
+        document.getElementById("spots").textContent = "ID: " + eventId;
+        document.getElementById("when").textContent = "Abrí la app para ver fecha y plazas";
+      }
+    }
+
+    document.getElementById("signupForm").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const name = document.getElementById("nameInput").value.trim();
+      const email = document.getElementById("emailInput").value.trim().toLowerCase();
+      const msg = document.getElementById("formMsg");
+      const btn = document.getElementById("submitBtn");
+      msg.hidden = true;
+      if (!name || !email || !email.includes("@")) {
+        showMsg("Completá nombre y un email válido.", true);
         return;
       }
-      document.getElementById("card").hidden = false;
-
-      const snap = decodeSnapshot(rawSnap);
-      if (snap) {
-        fillFromSnapshot(snap);
-      } else {
-        document.getElementById("title").textContent = "Evento " + id.slice(0, 8) + "…";
-        document.getElementById("when").textContent = "Abrí la app para ver fecha, nivel y plazas";
-        document.getElementById("typeChip").textContent = "INSCRIPCIÓN";
-        document.getElementById("spots").textContent = "ID: " + id;
+      if (!db || !auth || !eventState) {
+        showMsg("Inscripción web no disponible.", true);
+        return;
       }
-
-      function decodeSnapshot(encoded) {
-        if (!encoded) return null;
-        try {
-          let b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
-          while (b64.length % 4) b64 += "=";
-          const text = decodeURIComponent(escape(atob(b64)));
-          const p = text.split("|");
-          if (p.length < 8) return null;
-          return {
-            id: p[0],
-            type: p[1],
-            modality: p[2],
-            title: p[3],
-            startsAt: Number(p[4]) || 0,
-            capacity: Number(p[5]) || 0,
-            minConfirmed: Number(p[6]) || 0,
-            joined: Number(p[7]) || 0,
-            waitlist: Number(p[8]) || 0,
-            zone: p[9] || "",
-            venue: p[10] || "",
-            levelMin: p[11] || "",
-            levelMax: p[12] || "",
-            closesAt: p[13] ? Number(p[13]) : null,
-          };
-        } catch (e) {
-          return null;
+      btn.disabled = true;
+      try {
+        await ensureAuth();
+        const fresh = await loadEvent(eventId);
+        if (!fresh || fresh.status !== "open") {
+          throw new Error("Inscripción cerrada");
         }
+        if (fresh.closesAt && Date.now() >= fresh.closesAt) {
+          throw new Error("Inscripción cerrada");
+        }
+        const signupsSnap = await getDocs(collection(db, "open_events", eventId, "signups"));
+        let already = null;
+        signupsSnap.forEach((d) => {
+          const data = d.data();
+          if (
+            (data.email && data.email.toLowerCase() === email) ||
+            (data.displayName && data.displayName.toLowerCase() === name.toLowerCase())
+          ) {
+            already = data;
+          }
+        });
+        if (already) {
+          showMsg(
+            already.status === "waitlist"
+              ? "Ya estabas en reserva con esos datos."
+              : "Ya estabas inscrito con esos datos.",
+            false,
+          );
+          fillUi(fresh);
+          return;
+        }
+        const status = fresh.joined < fresh.capacity ? "confirmed" : "waitlist";
+        const uid = auth.currentUser.uid;
+        await setDoc(doc(db, "open_events", eventId, "signups", uid), {
+          uid,
+          displayName: name,
+          email,
+          status,
+          joinedAtEpochMs: Date.now(),
+        });
+        const joinedCount = fresh.joined + (status === "confirmed" ? 1 : 0);
+        const waitlistCount = fresh.waitlist + (status === "waitlist" ? 1 : 0);
+        await updateDoc(doc(db, "open_events", eventId), {
+          joinedCount,
+          waitlistCount,
+        });
+        eventState = { ...fresh, joined: joinedCount, waitlist: waitlistCount };
+        fillUi(eventState);
+        showMsg(
+          status === "waitlist"
+            ? "Quedaste en lista de espera. ¡Gracias!"
+            : "¡Inscripción confirmada!",
+          false,
+        );
+        btn.disabled = true;
+        document.getElementById("nameInput").disabled = true;
+        document.getElementById("emailInput").disabled = true;
+      } catch (e) {
+        console.error(e);
+        showMsg(e.message || "No se pudo completar la inscripción.", true);
+        btn.disabled = false;
       }
+    });
 
-      function fillFromSnapshot(s) {
-        const typeLabel = s.type === "torneo" ? "TORNEO" : "AMERICANA";
-        document.getElementById("typeChip").textContent = typeLabel;
-        document.getElementById("title").textContent = s.title || "Evento";
-        document.getElementById("when").textContent = s.startsAt
-          ? new Date(s.startsAt).toLocaleString("es", {
-              weekday: "long", day: "numeric", month: "long",
-              hour: "2-digit", minute: "2-digit",
-            })
-          : "—";
-        const modalityMap = {
-          all_vs_all: "Todos vs todos",
-          pairs: "Por parejas",
-          mixed_fixed: "Mixta fija",
-          mixed_rotating: "Mixta rotativa",
-          custom: "Personalizada",
-          ladder: "Escalera",
+    function enableForm(on) {
+      document.getElementById("signupForm").hidden = !on;
+    }
+
+    function showMsg(text, isErr) {
+      const msg = document.getElementById("formMsg");
+      msg.hidden = false;
+      msg.textContent = text;
+      msg.className = "msg " + (isErr ? "err" : "ok");
+    }
+
+    async function ensureAuth() {
+      if (auth.currentUser) return auth.currentUser;
+      await signInAnonymously(auth);
+      return new Promise((resolve, reject) => {
+        const unsub = onAuthStateChanged(auth, (u) => {
+          if (u) {
+            unsub();
+            resolve(u);
+          }
+        });
+        setTimeout(() => reject(new Error("Auth timeout")), 15000);
+      });
+    }
+
+    async function loadEvent(id) {
+      const snapDoc = await getDoc(doc(db, "open_events", id));
+      if (!snapDoc.exists()) return null;
+      const d = snapDoc.data();
+      return {
+        id,
+        type: d.type || "americana",
+        modality: d.americanaModality || "",
+        title: d.title || "Evento",
+        startsAt: d.startsAtEpochMs || 0,
+        capacity: d.capacity || 0,
+        minConfirmed: d.minConfirmed || 0,
+        joined: d.joinedCount || 0,
+        waitlist: d.waitlistCount || 0,
+        zone: d.zone || "",
+        venue: d.venueText || "",
+        levelMin: d.levelMin != null ? String(d.levelMin) : "",
+        levelMax: d.levelMax != null ? String(d.levelMax) : "",
+        closesAt: d.registrationClosesAtEpochMs || null,
+        status: d.status || "open",
+      };
+    }
+
+    function snapToState(s) {
+      return { ...s, status: "open" };
+    }
+
+    function decodeSnapshot(encoded) {
+      if (!encoded) return null;
+      try {
+        let b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+        while (b64.length % 4) b64 += "=";
+        const text = decodeURIComponent(escape(atob(b64)));
+        const p = text.split("|");
+        if (p.length < 8) return null;
+        return {
+          id: p[0],
+          type: p[1],
+          modality: p[2],
+          title: p[3],
+          startsAt: Number(p[4]) || 0,
+          capacity: Number(p[5]) || 0,
+          minConfirmed: Number(p[6]) || 0,
+          joined: Number(p[7]) || 0,
+          waitlist: Number(p[8]) || 0,
+          zone: p[9] || "",
+          venue: p[10] || "",
+          levelMin: p[11] || "",
+          levelMax: p[12] || "",
+          closesAt: p[13] ? Number(p[13]) : null,
         };
-        const modEl = document.getElementById("modality");
-        if (s.type === "americana" && s.modality) {
-          modEl.textContent = modalityMap[s.modality] || s.modality;
-        } else {
-          modEl.hidden = true;
-        }
-        const zoneEl = document.getElementById("zone");
-        if (s.zone) zoneEl.textContent = "Zona: " + s.zone; else zoneEl.hidden = true;
-        const venueEl = document.getElementById("venue");
-        if (s.venue) venueEl.textContent = s.venue; else venueEl.hidden = true;
-        const levelEl = document.getElementById("level");
-        if (s.levelMin && s.levelMax) {
-          levelEl.textContent = "Nivel: " + s.levelMin + "–" + s.levelMax;
-        } else {
-          levelEl.hidden = true;
-        }
-        let spots = s.joined + " de " + s.capacity + " plazas";
-        if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
-        document.getElementById("spots").textContent = spots;
-        document.getElementById("min").textContent =
-          s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
-        const closesEl = document.getElementById("closes");
-        if (s.closesAt) {
-          closesEl.textContent = "Cierra inscripción: " +
-            new Date(s.closesAt).toLocaleString("es", {
-              day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-            });
-        } else {
-          closesEl.hidden = true;
-        }
+      } catch (e) {
+        return null;
       }
-    })();
+    }
+
+    function fillUi(s) {
+      const typeLabel = s.type === "torneo" ? "TORNEO" : "AMERICANA";
+      document.getElementById("typeChip").textContent = typeLabel;
+      document.getElementById("title").textContent = s.title || "Evento";
+      document.getElementById("when").textContent = s.startsAt
+        ? new Date(s.startsAt).toLocaleString("es", {
+            weekday: "long", day: "numeric", month: "long",
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "—";
+      const modalityMap = {
+        all_vs_all: "Todos vs todos",
+        pairs: "Por parejas",
+        mixed_fixed: "Mixta fija",
+        mixed_rotating: "Mixta rotativa",
+        custom: "Personalizada",
+        ladder: "Escalera",
+      };
+      const modEl = document.getElementById("modality");
+      if (s.type === "americana" && s.modality) {
+        modEl.hidden = false;
+        modEl.textContent = modalityMap[s.modality] || s.modality;
+      } else {
+        modEl.hidden = true;
+      }
+      const zoneEl = document.getElementById("zone");
+      if (s.zone) { zoneEl.hidden = false; zoneEl.textContent = "Zona: " + s.zone; }
+      else zoneEl.hidden = true;
+      const venueEl = document.getElementById("venue");
+      if (s.venue) { venueEl.hidden = false; venueEl.textContent = s.venue; }
+      else venueEl.hidden = true;
+      const levelEl = document.getElementById("level");
+      if (s.levelMin && s.levelMax) {
+        levelEl.hidden = false;
+        levelEl.textContent = "Nivel: " + s.levelMin + "–" + s.levelMax;
+      } else levelEl.hidden = true;
+      let spots = s.joined + " de " + s.capacity + " plazas";
+      if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
+      document.getElementById("spots").textContent = spots;
+      document.getElementById("min").textContent =
+        s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
+      const closesEl = document.getElementById("closes");
+      if (s.closesAt) {
+        closesEl.hidden = false;
+        closesEl.textContent = "Cierra inscripción: " +
+          new Date(s.closesAt).toLocaleString("es", {
+            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+          });
+      } else closesEl.hidden = true;
+    }
   </script>
 </body>
 </html>
