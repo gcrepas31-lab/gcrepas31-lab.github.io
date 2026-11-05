@@ -1,10 +1,8 @@
-// Reemplazá con la config de Firebase Console → Project settings → Your apps → Web.
-// Hasta entonces la ficha funciona con ?d= pero el formulario de inscripción queda desactivado.
 window.FIXTUREGO_FIREBASE = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyDmfzSZVb1_B4e6YsFfBL1DfjqFBLB0isQ",
+  authDomain: "fixturego.firebaseapp.com",
+  projectId: "fixturego",
+  storageBucket: "fixturego.firebasestorage.app",
+  messagingSenderId: "521928350799",
+  appId: "1:521928350799:web:81696ed88a708a4d8d5e3a",
 };
