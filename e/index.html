@@ -68,7 +68,15 @@
     .msg.err { color: var(--danger); }
     .err-page { color: var(--danger); text-align: center; margin-top: 24px; }
     #signupForm { margin-top: 8px; }
-    #signupForm[hidden], #openApp[hidden] { display: none !important; }
+    #signupForm[hidden], #doneBox[hidden], #rosterBox[hidden] { display: none !important; }
+    .roster-title { font-weight: 700; margin: 16px 0 6px; font-size: .95rem; }
+    .roster-list { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .95rem; }
+    .roster-list li { margin: 2px 0; }
+    #doneBox {
+      margin-top: 14px; padding: 14px; border-radius: 12px;
+      background: #0e2a40; border: 1px solid #2a5070; text-align: center;
+    }
+    #doneBox strong { color: var(--accent); }
   </style>
   <script src="./firebase-config.js"></script>
 </head>
@@ -91,6 +99,12 @@
       <p class="meta" id="min"></p>
       <p class="meta" id="closes"></p>
 
+      <div id="rosterBox" hidden>
+        <p class="roster-title">Inscritos</p>
+        <ol class="roster-list" id="rosterList"></ol>
+        <p class="meta" id="rosterWait" hidden></p>
+      </div>
+
       <form id="signupForm" hidden>
         <label for="nameInput">Nombre</label>
         <input id="nameInput" name="name" autocomplete="name" required maxlength="79" />
@@ -99,6 +113,12 @@
         <button class="btn" type="submit" id="submitBtn">Inscribirme</button>
         <p class="msg" id="formMsg" hidden></p>
       </form>
+
+      <div id="doneBox" hidden>
+        <strong id="doneTitle">¡Inscripción confirmada!</strong>
+        <p class="meta" id="doneSub" style="margin-top:8px">Ya figurás en la lista. Abrí la app para seguir el evento.</p>
+      </div>
+
       <p class="note" id="firebaseHint" hidden>
         La inscripción web se activa cuando el organizador publica con Firebase.
         Mientras tanto abrí la app.
@@ -127,10 +147,25 @@
       if (i >= 0 && parts[i + 1] && parts[i + 1] !== "index.html") eventId = parts[i + 1];
     }
 
-    const openApp = document.getElementById("openApp");
-    openApp.href = eventId
+    const deepHttps = eventId
       ? "https://fixturego.com/e/?id=" + encodeURIComponent(eventId)
       : "https://fixturego.com/";
+    const playStore =
+      "https://play.google.com/store/apps/details?id=com.gopadel.americano";
+
+    const openApp = document.getElementById("openApp");
+    openApp.href = deepHttps;
+    openApp.addEventListener("click", (e) => {
+      const ua = navigator.userAgent || "";
+      const isAndroid = /Android/i.test(ua);
+      if (!isAndroid || !eventId) return;
+      e.preventDefault();
+      const intentUrl =
+        "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
+        "#Intent;scheme=https;package=com.gopadel.americano;" +
+        "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
+      window.location.href = intentUrl;
+    });
 
     if (!eventId) {
       document.getElementById("err").hidden = false;
@@ -142,6 +177,7 @@
     const firebaseReady = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
 
     let eventState = null;
+    let mySignupStatus = null; // 'confirmed' | 'waitlist' | null
     const snap = decodeSnapshot(rawSnap);
     if (snap) {
       eventState = snapToState(snap);
@@ -164,7 +200,8 @@
         if (remote) {
           eventState = remote;
           fillUi(eventState);
-          enableForm(true);
+          await refreshRosterAndMine();
+          if (!mySignupStatus) enableForm(true);
         } else if (snap) {
           document.getElementById("firebaseHint").hidden = false;
           document.getElementById("firebaseHint").textContent =
@@ -194,11 +231,14 @@
 
     document.getElementById("signupForm").addEventListener("submit", async (ev) => {
       ev.preventDefault();
+      if (mySignupStatus) {
+        showDone(mySignupStatus);
+        return;
+      }
       const name = document.getElementById("nameInput").value.trim();
       const email = document.getElementById("emailInput").value.trim().toLowerCase();
-      const msg = document.getElementById("formMsg");
       const btn = document.getElementById("submitBtn");
-      msg.hidden = true;
+      document.getElementById("formMsg").hidden = true;
       if (!name || !email || !email.includes("@")) {
         showMsg("Completá nombre y un email válido.", true);
         return;
@@ -217,25 +257,18 @@
         if (fresh.closesAt && Date.now() >= fresh.closesAt) {
           throw new Error("Inscripción cerrada");
         }
-        const signupsSnap = await getDocs(collection(db, "open_events", eventId, "signups"));
-        let already = null;
-        signupsSnap.forEach((d) => {
-          const data = d.data();
-          if (
-            (data.email && data.email.toLowerCase() === email) ||
-            (data.displayName && data.displayName.toLowerCase() === name.toLowerCase())
-          ) {
-            already = data;
-          }
-        });
+        const signups = await loadSignups(eventId);
+        let already = signups.find((data) =>
+          (data.email && data.email.toLowerCase() === email) ||
+          (data.displayName && data.displayName.toLowerCase() === name.toLowerCase()) ||
+          (auth.currentUser && data.uid === auth.currentUser.uid)
+        );
         if (already) {
-          showMsg(
-            already.status === "waitlist"
-              ? "Ya estabas en reserva con esos datos."
-              : "Ya estabas inscrito con esos datos.",
-            false,
-          );
-          fillUi(fresh);
+          mySignupStatus = already.status === "waitlist" ? "waitlist" : "confirmed";
+          eventState = fresh;
+          fillUi(eventState);
+          renderRoster(signups);
+          showDone(mySignupStatus);
           return;
         }
         const status = fresh.joined < fresh.capacity ? "confirmed" : "waitlist";
@@ -253,17 +286,11 @@
           joinedCount,
           waitlistCount,
         });
+        mySignupStatus = status;
         eventState = { ...fresh, joined: joinedCount, waitlist: waitlistCount };
         fillUi(eventState);
-        showMsg(
-          status === "waitlist"
-            ? "Quedaste en lista de espera. ¡Gracias!"
-            : "¡Inscripción confirmada!",
-          false,
-        );
-        btn.disabled = true;
-        document.getElementById("nameInput").disabled = true;
-        document.getElementById("emailInput").disabled = true;
+        await refreshRosterAndMine();
+        showDone(status);
       } catch (e) {
         console.error(e);
         showMsg(e.message || "No se pudo completar la inscripción.", true);
@@ -273,6 +300,21 @@
 
     function enableForm(on) {
       document.getElementById("signupForm").hidden = !on;
+      if (on) document.getElementById("doneBox").hidden = true;
+    }
+
+    function showDone(status) {
+      enableForm(false);
+      const box = document.getElementById("doneBox");
+      box.hidden = false;
+      document.getElementById("doneTitle").textContent =
+        status === "waitlist" ? "Quedaste en lista de espera" : "¡Inscripción confirmada!";
+      document.getElementById("doneSub").textContent =
+        status === "waitlist"
+          ? "Si se libera una plaza, el organizador puede subirte. Abrí la app para seguir el evento."
+          : "Ya figurás en la lista. Abrí la app para seguir el evento.";
+      document.getElementById("subtitle").textContent = "Ya estás apuntado a este evento.";
+      document.getElementById("formMsg").hidden = true;
     }
 
     function showMsg(text, isErr) {
@@ -294,6 +336,59 @@
         });
         setTimeout(() => reject(new Error("Auth timeout")), 15000);
       });
+    }
+
+    async function loadSignups(id) {
+      const snap = await getDocs(collection(db, "open_events", id, "signups"));
+      const list = [];
+      snap.forEach((d) => list.push(d.data()));
+      return list;
+    }
+
+    async function refreshRosterAndMine() {
+      if (!db) return;
+      try {
+        if (auth && !auth.currentUser) {
+          try { await ensureAuth(); } catch (_) {}
+        }
+        const signups = await loadSignups(eventId);
+        renderRoster(signups);
+        const uid = auth && auth.currentUser ? auth.currentUser.uid : null;
+        const mine = uid ? signups.find((s) => s.uid === uid) : null;
+        if (mine) {
+          mySignupStatus = mine.status === "waitlist" ? "waitlist" : "confirmed";
+          showDone(mySignupStatus);
+        }
+      } catch (e) {
+        console.warn("roster", e);
+      }
+    }
+
+    function renderRoster(signups) {
+      const confirmed = signups
+        .filter((s) => s.status !== "waitlist")
+        .sort((a, b) => (a.joinedAtEpochMs || 0) - (b.joinedAtEpochMs || 0));
+      const wait = signups.filter((s) => s.status === "waitlist").length;
+      const box = document.getElementById("rosterBox");
+      const ol = document.getElementById("rosterList");
+      const waitEl = document.getElementById("rosterWait");
+      ol.innerHTML = "";
+      if (confirmed.length === 0 && wait === 0) {
+        box.hidden = true;
+        return;
+      }
+      box.hidden = false;
+      confirmed.forEach((s) => {
+        const li = document.createElement("li");
+        li.textContent = s.displayName || "Jugador";
+        ol.appendChild(li);
+      });
+      if (wait > 0) {
+        waitEl.hidden = false;
+        waitEl.textContent = "+" + wait + " en reserva";
+      } else {
+        waitEl.hidden = true;
+      }
     }
 
     async function loadEvent(id) {
