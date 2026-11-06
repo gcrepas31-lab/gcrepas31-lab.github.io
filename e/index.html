@@ -117,6 +117,9 @@
       <div id="doneBox" hidden>
         <strong id="doneTitle">¡Inscripción confirmada!</strong>
         <p class="meta" id="doneSub" style="margin-top:8px">Ya figurás en la lista. Abrí la app para seguir el evento.</p>
+        <button type="button" class="btn btn-secondary" id="anotherBtn" style="margin-top:12px">
+          Anotar a otra persona
+        </button>
       </div>
 
       <p class="note" id="firebaseHint" hidden>
@@ -124,7 +127,7 @@
         Mientras tanto abrí la app.
       </p>
       <a class="btn btn-secondary" id="openApp" href="#">Abrir en FixtureGo</a>
-      <p class="note">Si no tenés la app, instálala desde Google Play.</p>
+      <p class="note" id="openAppNote">Si no tenés la app, instálala desde Google Play.</p>
     </div>
   </div>
   <p class="err-page" id="err" hidden>No encontramos este evento.</p>
@@ -132,7 +135,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getAuth, signInAnonymously, onAuthStateChanged,
+      getAuth, signInAnonymously, signOut, onAuthStateChanged,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc,
@@ -156,15 +159,49 @@
     const openApp = document.getElementById("openApp");
     openApp.href = deepHttps;
     openApp.addEventListener("click", (e) => {
+      e.preventDefault();
       const ua = navigator.userAgent || "";
       const isAndroid = /Android/i.test(ua);
-      if (!isAndroid || !eventId) return;
-      e.preventDefault();
-      const intentUrl =
-        "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
-        "#Intent;scheme=https;package=com.gopadel.americano;" +
-        "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
-      window.location.href = intentUrl;
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      if (isAndroid && eventId) {
+        const intentUrl =
+          "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
+          "#Intent;scheme=https;package=com.gopadel.americano;" +
+          "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
+        window.location.href = intentUrl;
+        return;
+      }
+      if (isIOS) {
+        window.location.href = deepHttps;
+        setTimeout(() => {
+          window.location.href = playStore;
+        }, 1500);
+        return;
+      }
+      window.open(deepHttps, "_blank");
+    });
+
+    document.getElementById("anotherBtn").addEventListener("click", async () => {
+      if (!auth) return;
+      try {
+        await signOut(auth);
+        await signInAnonymously(auth);
+        mySignupStatus = null;
+        document.getElementById("doneBox").hidden = true;
+        document.getElementById("nameInput").value = "";
+        document.getElementById("emailInput").value = "";
+        document.getElementById("nameInput").disabled = false;
+        document.getElementById("emailInput").disabled = false;
+        document.getElementById("submitBtn").disabled = false;
+        document.getElementById("subtitle").textContent =
+          "Completá los datos de la otra persona.";
+        enableForm(true);
+        document.getElementById("formMsg").hidden = true;
+      } catch (err) {
+        console.error(err);
+        showMsg("No se pudo preparar otra inscripción. Probá en una ventana de incógnito.", true);
+        enableForm(true);
+      }
     });
 
     if (!eventId) {
@@ -263,6 +300,19 @@
           (data.displayName && data.displayName.toLowerCase() === name.toLowerCase()) ||
           (auth.currentUser && data.uid === auth.currentUser.uid)
         );
+        const uid = auth.currentUser.uid;
+        const mineByUid = signups.find((data) => data.uid === uid);
+        if (mineByUid && !already) {
+          // Misma sesión web ya inscrita con otro nombre: ofrecer otra persona
+          showMsg(
+            "Este navegador ya tiene una inscripción. Usá “Anotar a otra persona”.",
+            true,
+          );
+          mySignupStatus = mineByUid.status === "waitlist" ? "waitlist" : "confirmed";
+          showDone(mySignupStatus);
+          btn.disabled = false;
+          return;
+        }
         if (already) {
           mySignupStatus = already.status === "waitlist" ? "waitlist" : "confirmed";
           eventState = fresh;
@@ -272,7 +322,6 @@
           return;
         }
         const status = fresh.joined < fresh.capacity ? "confirmed" : "waitlist";
-        const uid = auth.currentUser.uid;
         await setDoc(doc(db, "open_events", eventId, "signups", uid), {
           uid,
           displayName: name,
@@ -293,7 +342,11 @@
         showDone(status);
       } catch (e) {
         console.error(e);
-        showMsg(e.message || "No se pudo completar la inscripción.", true);
+        const raw = (e && (e.message || e.code)) || "";
+        const friendly = /permission|insufficient/i.test(String(raw))
+          ? "Este navegador ya tiene una plaza. Tocá “Anotar a otra persona” o usá incógnito."
+          : (e.message || "No se pudo completar la inscripción.");
+        showMsg(friendly, true);
         btn.disabled = false;
       }
     });
