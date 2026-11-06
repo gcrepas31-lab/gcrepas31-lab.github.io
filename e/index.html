@@ -62,21 +62,27 @@
     .btn-secondary {
       background: transparent; color: var(--accent); border: 1px solid var(--accent);
     }
+    .btn-google {
+      background: #fff; color: #1f1f1f; border: none;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
     .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 8px 0 0; }
     .msg { text-align: center; margin-top: 10px; font-size: .95rem; }
     .msg.ok { color: var(--accent); }
     .msg.err { color: var(--danger); }
     .err-page { color: var(--danger); text-align: center; margin-top: 24px; }
     #signupForm { margin-top: 8px; }
-    #signupForm[hidden], #doneBox[hidden], #rosterBox[hidden] { display: none !important; }
+    #signupForm[hidden], #doneBox[hidden], #rosterBox[hidden],
+    #googleBox[hidden], #oneClickBox[hidden] { display: none !important; }
     .roster-title { font-weight: 700; margin: 16px 0 6px; font-size: .95rem; }
     .roster-list { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .95rem; }
     .roster-list li { margin: 2px 0; }
-    #doneBox {
+    #doneBox, #oneClickBox, #googleBox {
       margin-top: 14px; padding: 14px; border-radius: 12px;
       background: #0e2a40; border: 1px solid #2a5070; text-align: center;
     }
-    #doneBox strong { color: var(--accent); }
+    #doneBox strong, #oneClickBox strong { color: var(--accent); }
+    .profile-line { color: var(--muted); font-size: .9rem; margin: 6px 0 0; }
   </style>
   <script src="./firebase-config.js"></script>
 </head>
@@ -103,6 +109,20 @@
         <p class="roster-title">Inscritos</p>
         <ol class="roster-list" id="rosterList"></ol>
         <p class="meta" id="rosterWait" hidden></p>
+      </div>
+
+      <div id="googleBox" hidden>
+        <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
+        <p class="note">La próxima vez ya estarás logueado: un clic para inscribirte.</p>
+      </div>
+
+      <div id="oneClickBox" hidden>
+        <strong>Listo para inscribirte</strong>
+        <p class="profile-line" id="profileLine"></p>
+        <button type="button" class="btn" id="oneClickBtn">Inscribirme</button>
+        <button type="button" class="btn btn-secondary" id="manualInsteadBtn" style="margin-top:8px">
+          Usar otro nombre / email
+        </button>
       </div>
 
       <form id="signupForm" hidden>
@@ -136,6 +156,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
       getAuth, signInAnonymously, signOut, onAuthStateChanged,
+      GoogleAuthProvider, linkWithPopup, signInWithPopup, linkWithRedirect,
+      getRedirectResult,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc,
@@ -173,9 +195,7 @@
       }
       if (isIOS) {
         window.location.href = deepHttps;
-        setTimeout(() => {
-          window.location.href = playStore;
-        }, 1500);
+        setTimeout(() => { window.location.href = playStore; }, 1500);
         return;
       }
       window.open(deepHttps, "_blank");
@@ -195,6 +215,7 @@
         document.getElementById("submitBtn").disabled = false;
         document.getElementById("subtitle").textContent =
           "Completá los datos de la otra persona.";
+        updateAuthUi();
         enableForm(true);
         document.getElementById("formMsg").hidden = true;
       } catch (err) {
@@ -214,7 +235,7 @@
     const firebaseReady = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
 
     let eventState = null;
-    let mySignupStatus = null; // 'confirmed' | 'waitlist' | null
+    let mySignupStatus = null;
     const snap = decodeSnapshot(rawSnap);
     if (snap) {
       eventState = snapToState(snap);
@@ -227,18 +248,121 @@
 
     let db = null;
     let auth = null;
+    const googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+
+    function isGoogleUser(u) {
+      return !!(u && !u.isAnonymous && u.providerData &&
+        u.providerData.some((p) => p.providerId === "google.com"));
+    }
+
+    function updateAuthUi() {
+      const u = auth && auth.currentUser;
+      const google = isGoogleUser(u);
+      const googleBox = document.getElementById("googleBox");
+      const oneClick = document.getElementById("oneClickBox");
+      if (mySignupStatus) {
+        googleBox.hidden = true;
+        oneClick.hidden = true;
+        return;
+      }
+      if (!firebaseReady || !eventState || eventState.status !== "open") {
+        googleBox.hidden = true;
+        oneClick.hidden = true;
+        return;
+      }
+      if (google) {
+        googleBox.hidden = true;
+        oneClick.hidden = false;
+        const name = u.displayName || "";
+        const email = u.email || "";
+        document.getElementById("profileLine").textContent =
+          (name ? name + " · " : "") + email;
+        document.getElementById("nameInput").value = name;
+        document.getElementById("emailInput").value = email;
+        document.getElementById("signupForm").hidden = true;
+        document.getElementById("subtitle").textContent =
+          "Estás logueado. Un clic para apuntarte.";
+      } else {
+        googleBox.hidden = false;
+        oneClick.hidden = true;
+      }
+    }
+
+    async function linkOrSignInGoogle() {
+      if (!auth) return;
+      const btn = document.getElementById("googleBtn");
+      btn.disabled = true;
+      try {
+        await ensureAuth();
+        const current = auth.currentUser;
+        try {
+          if (current && current.isAnonymous) {
+            await linkWithPopup(current, googleProvider);
+          } else {
+            await signInWithPopup(auth, googleProvider);
+          }
+        } catch (e) {
+          const code = e && e.code;
+          if (code === "auth/credential-already-in-use" ||
+              code === "auth/email-already-in-use" ||
+              code === "auth/account-exists-with-different-credential") {
+            await signInWithPopup(auth, googleProvider);
+          } else if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
+            if (current && current.isAnonymous) {
+              await linkWithRedirect(current, googleProvider);
+            } else {
+              await signInWithPopup(auth, googleProvider);
+            }
+            return;
+          } else {
+            throw e;
+          }
+        }
+        updateAuthUi();
+        await refreshRosterAndMine();
+      } catch (e) {
+        console.error(e);
+        showMsg(e.message || "No se pudo iniciar con Google.", true);
+        enableForm(true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById("googleBtn").addEventListener("click", linkOrSignInGoogle);
+    document.getElementById("manualInsteadBtn").addEventListener("click", () => {
+      document.getElementById("oneClickBox").hidden = true;
+      enableForm(true);
+    });
+    document.getElementById("oneClickBtn").addEventListener("click", async () => {
+      const u = auth && auth.currentUser;
+      if (!isGoogleUser(u)) return;
+      document.getElementById("nameInput").value = u.displayName || "";
+      document.getElementById("emailInput").value = u.email || "";
+      document.getElementById("signupForm").requestSubmit();
+    });
 
     if (firebaseReady) {
       const app = initializeApp(cfg);
       auth = getAuth(app);
       db = getFirestore(app);
       try {
+        await getRedirectResult(auth);
+      } catch (e) {
+        console.warn("redirect", e);
+      }
+      try {
         const remote = await loadEvent(eventId);
         if (remote) {
           eventState = remote;
           fillUi(eventState);
+          await ensureAuth();
           await refreshRosterAndMine();
-          if (!mySignupStatus) enableForm(true);
+          if (!mySignupStatus) {
+            updateAuthUi();
+            if (!isGoogleUser(auth.currentUser)) enableForm(true);
+          }
         } else if (snap) {
           document.getElementById("firebaseHint").hidden = false;
           document.getElementById("firebaseHint").textContent =
@@ -255,6 +379,9 @@
           enableForm(false);
         }
       }
+      onAuthStateChanged(auth, () => {
+        if (!mySignupStatus) updateAuthUi();
+      });
     } else {
       document.getElementById("subtitle").textContent =
         "Ficha del evento. La inscripción online se activa con Firebase.";
@@ -275,6 +402,7 @@
       const name = document.getElementById("nameInput").value.trim();
       const email = document.getElementById("emailInput").value.trim().toLowerCase();
       const btn = document.getElementById("submitBtn");
+      const oneBtn = document.getElementById("oneClickBtn");
       document.getElementById("formMsg").hidden = true;
       if (!name || !email || !email.includes("@")) {
         showMsg("Completá nombre y un email válido.", true);
@@ -285,6 +413,7 @@
         return;
       }
       btn.disabled = true;
+      oneBtn.disabled = true;
       try {
         await ensureAuth();
         const fresh = await loadEvent(eventId);
@@ -303,7 +432,6 @@
         const uid = auth.currentUser.uid;
         const mineByUid = signups.find((data) => data.uid === uid);
         if (mineByUid && !already) {
-          // Misma sesión web ya inscrita con otro nombre: ofrecer otra persona
           showMsg(
             "Este navegador ya tiene una inscripción. Usá “Anotar a otra persona”.",
             true,
@@ -311,6 +439,7 @@
           mySignupStatus = mineByUid.status === "waitlist" ? "waitlist" : "confirmed";
           showDone(mySignupStatus);
           btn.disabled = false;
+          oneBtn.disabled = false;
           return;
         }
         if (already) {
@@ -348,16 +477,24 @@
           : (e.message || "No se pudo completar la inscripción.");
         showMsg(friendly, true);
         btn.disabled = false;
+        oneBtn.disabled = false;
       }
     });
 
     function enableForm(on) {
       document.getElementById("signupForm").hidden = !on;
-      if (on) document.getElementById("doneBox").hidden = true;
+      if (on) {
+        document.getElementById("doneBox").hidden = true;
+        if (isGoogleUser(auth && auth.currentUser)) {
+          document.getElementById("oneClickBox").hidden = true;
+        }
+      }
     }
 
     function showDone(status) {
       enableForm(false);
+      document.getElementById("googleBox").hidden = true;
+      document.getElementById("oneClickBox").hidden = true;
       const box = document.getElementById("doneBox");
       box.hidden = false;
       document.getElementById("doneTitle").textContent =
@@ -375,6 +512,7 @@
       msg.hidden = false;
       msg.textContent = text;
       msg.className = "msg " + (isErr ? "err" : "ok");
+      document.getElementById("signupForm").hidden = false;
     }
 
     async function ensureAuth() {
