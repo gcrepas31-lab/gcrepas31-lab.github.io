@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FixtureGo · Eventos abiertos</title>
-  <meta name="description" content="Inscripciones abiertas y tus eventos en FixtureGo Padel." />
+  <title>FixtureGo · Eventos</title>
+  <meta name="description" content="Inscripciones abiertas FixtureGo Padel." />
   <style>
     :root {
       --bg: #0b1f2e;
@@ -14,169 +14,192 @@
       --accent: #7ed957;
       --chip: #1e4d7a;
       --danger: #ffb4a8;
+      --line: #2a5070;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh;
       font-family: "Segoe UI", system-ui, sans-serif;
-      background: radial-gradient(1200px 600px at 20% -10%, #1a4a6e, var(--bg));
+      background: radial-gradient(1100px 520px at 15% -15%, #1a4a6e, var(--bg));
       color: var(--text);
-      padding: 28px 18px 48px;
+      padding: 24px 16px 40px;
     }
-    .wrap { max-width: 520px; margin: 0 auto; }
-    h1 { font-size: 1.5rem; margin: 0 0 6px; font-weight: 700; }
-    .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
-    .auth {
-      background: var(--card); border-radius: 14px; padding: 14px 16px;
-      margin-bottom: 18px; border: 1px solid #2a5070;
+    .wrap { max-width: 480px; margin: 0 auto; }
+    [hidden] { display: none !important; }
+
+    /* —— Pantalla login —— */
+    .gate {
+      min-height: 70vh; display: flex; flex-direction: column;
+      justify-content: center; text-align: center; padding: 12px 4px;
     }
-    .auth .welcome { margin: 0; color: var(--accent); font-weight: 700; font-size: 1.1rem; }
-    .auth .meta { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .gate .brand {
+      width: 72px; height: 72px; border-radius: 16px; object-fit: cover;
+      margin: 0 auto 18px; background: var(--card);
+    }
+    .gate h1 { font-size: 1.75rem; margin: 0 0 8px; letter-spacing: -.02em; }
+    .gate p { color: var(--muted); margin: 0 0 28px; line-height: 1.45; font-size: 1rem; }
+    .gate .hint { margin-top: 18px; font-size: .85rem; color: var(--muted); }
+
+    /* —— App logueada —— */
+    .top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 18px;
+    }
+    .top h1 { font-size: 1.35rem; margin: 0; }
+    .top .hello { margin: 4px 0 0; color: var(--accent); font-weight: 700; font-size: 1rem; }
+    .top .email { margin: 2px 0 0; color: var(--muted); font-size: .8rem; }
+    .linkish {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: .85rem; text-decoration: underline; padding: 4px 0; white-space: nowrap;
+    }
+    .linkish:hover { color: var(--text); }
+
     .tabs {
-      display: flex; gap: 8px; margin-bottom: 14px;
+      display: flex; gap: 6px; margin-bottom: 14px;
+      background: rgba(0,0,0,.18); border-radius: 999px; padding: 4px;
     }
     .tab {
-      flex: 1; padding: 10px 12px; border-radius: 999px; border: 1px solid #2a5070;
-      background: transparent; color: var(--muted); font-weight: 700; cursor: pointer;
-      font-size: .9rem;
+      flex: 1; padding: 10px; border: none; border-radius: 999px;
+      background: transparent; color: var(--muted); font-weight: 700;
+      cursor: pointer; font-size: .9rem;
     }
-    .tab.active {
-      background: var(--accent); color: #0b1f2e; border-color: transparent;
-    }
+    .tab.active { background: var(--accent); color: #0b1f2e; }
+
     .card {
+      display: block; text-decoration: none; color: inherit;
       background: var(--card); border-radius: 16px; padding: 16px 18px;
-      margin-bottom: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.25);
-      color: inherit; display: block;
+      margin-bottom: 10px; border: 1px solid transparent;
     }
-    .card-link {
-      text-decoration: none; color: inherit; display: block;
-    }
-    .card-link:hover h2 { color: var(--accent); }
+    .card:active { border-color: var(--accent); }
     .chip {
       display: inline-block; background: var(--chip); color: #fff;
-      font-size: .7rem; font-weight: 700; letter-spacing: .04em;
-      padding: 3px 9px; border-radius: 999px; margin-bottom: 8px;
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+      padding: 3px 8px; border-radius: 999px; margin-bottom: 8px;
     }
-    .card h2 { font-size: 1.15rem; margin: 0 0 6px; }
-    .meta { color: var(--muted); font-size: .92rem; margin: 3px 0; }
+    .badge {
+      float: right; font-size: .72rem; color: var(--accent); font-weight: 700;
+      margin-top: 2px;
+    }
+    .card h2 { font-size: 1.12rem; margin: 0 0 4px; }
+    .meta { color: var(--muted); font-size: .9rem; margin: 2px 0; }
+
     .btn {
-      display: block; width: 100%; margin: 10px 0 0; text-align: center;
-      background: var(--accent); color: #0b1f2e; font-weight: 700; border: none;
-      padding: 12px 16px; border-radius: 999px; cursor: pointer; font-size: .95rem;
-      text-decoration: none;
-    }
-    .btn-secondary {
-      background: transparent; color: var(--accent); border: 1px solid var(--accent);
-    }
-    .btn-danger {
-      background: transparent; color: var(--danger); border: 1px solid var(--danger);
-      margin-top: 8px;
+      display: block; width: 100%; text-align: center; border: none;
+      background: var(--accent); color: #0b1f2e; font-weight: 700;
+      padding: 14px 18px; border-radius: 999px; cursor: pointer; font-size: 1rem;
     }
     .btn:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-google {
-      background: #fff; color: #1f1f1f; border: none;
-    }
-    .empty, .err, .loading {
-      text-align: center; color: var(--muted); padding: 28px 12px; font-size: .95rem;
+    .btn-google { background: #fff; color: #1f1f1f; }
+
+    .empty, .loading, .err {
+      text-align: center; color: var(--muted); padding: 36px 12px; font-size: .95rem;
     }
     .err { color: var(--danger); }
-    .badge-mine {
-      float: right; font-size: .72rem; color: var(--accent); font-weight: 700;
-    }
   </style>
   <script src="../e/firebase-config.js"></script>
 </head>
 <body>
   <div class="wrap">
-    <h1>FixtureGo</h1>
-    <p class="sub">Inscripciones abiertas y tus eventos.</p>
+    <!-- No logueado: solo login -->
+    <section id="gate" class="gate" hidden>
+      <img class="brand" src="../logo-fixturego.jpg" alt=""
+           onerror="this.style.display='none'" />
+      <h1>FixtureGo</h1>
+      <p>Entrá con Google para ver eventos abiertos e inscribirte en un clic.</p>
+      <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
+      <p class="hint" id="gateHint">Quedás logueado en este navegador.</p>
+      <p class="err" id="gateErr" hidden></p>
+    </section>
 
-    <div class="auth" id="authBox">
-      <div id="authLoggedOut">
-        <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
-        <p class="meta" style="margin-top:10px">Una vez: elegís la cuenta. Después quedás logueado acá.</p>
+    <!-- Logueado -->
+    <section id="app" hidden>
+      <header class="top">
+        <div>
+          <h1>Eventos</h1>
+          <p class="hello" id="hello">¡Hola!</p>
+          <p class="email" id="emailLine"></p>
+        </div>
+        <button type="button" class="linkish" id="signOutBtn">Salir</button>
+      </header>
+
+      <div class="tabs">
+        <button type="button" class="tab active" id="tabOpen">Abiertos</button>
+        <button type="button" class="tab" id="tabMine">Mis inscripciones</button>
       </div>
-      <div id="authLoggedIn" hidden>
-        <p class="welcome" id="authWelcome">¡Hola!</p>
-        <div class="meta" id="authEmail">—</div>
-        <button type="button" class="btn btn-secondary" id="signOutBtn">Cerrar sesión</button>
-      </div>
-    </div>
 
-    <div class="tabs">
-      <button type="button" class="tab active" id="tabOpen" data-tab="open">Abiertos</button>
-      <button type="button" class="tab" id="tabMine" data-tab="mine">Mis inscripciones</button>
-    </div>
-
-    <div id="list" class="loading">Cargando…</div>
-    <p class="err" id="err" hidden></p>
+      <div id="list" class="loading">Cargando…</div>
+      <p class="err" id="listErr" hidden></p>
+    </section>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getAuth, signInAnonymously, signOut, onAuthStateChanged,
+      getAuth, signOut, onAuthStateChanged,
       GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
       signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
-      getFirestore, collection, query, where, orderBy, getDocs, getDoc, doc,
-      collectionGroup, deleteDoc, updateDoc,
+      getFirestore, collection, query, where, orderBy, getDocs, getDoc,
+      collectionGroup,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const cfg = window.FIXTUREGO_FIREBASE;
-    const firebaseReady = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
+    const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
+    const gate = document.getElementById("gate");
+    const appEl = document.getElementById("app");
     const listEl = document.getElementById("list");
-    const errEl = document.getElementById("err");
+    const gateErr = document.getElementById("gateErr");
+    const listErr = document.getElementById("listErr");
+    const googleBtn = document.getElementById("googleBtn");
+
     let tab = "open";
     let auth = null;
     let db = null;
-    const googleProvider = new GoogleAuthProvider();
+    let booted = false;
+    const provider = new GoogleAuthProvider();
 
-    function prefersRedirectAuth() {
-      const ua = navigator.userAgent || "";
-      return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(ua);
-    }
-
-    function isGoogleUser(u) {
+    function isGoogle(u) {
       return !!(u && !u.isAnonymous && u.providerData &&
         u.providerData.some((p) => p.providerId === "google.com"));
     }
-
     function firstName(u) {
-      const full = (u && u.displayName) || "";
-      return full.trim().split(/\s+/)[0] || "jugador";
+      const n = ((u && u.displayName) || "").trim().split(/\s+/)[0];
+      return n || "jugador";
     }
-
-    function showErr(msg) {
-      errEl.hidden = !msg;
-      errEl.textContent = msg || "";
+    function mobile() {
+      return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(
+        navigator.userAgent || "",
+      );
     }
-
-    function updateAuthUi() {
-      const u = auth && auth.currentUser;
-      const google = isGoogleUser(u);
-      document.getElementById("authLoggedOut").hidden = google;
-      document.getElementById("authLoggedIn").hidden = !google;
-      if (google) {
-        document.getElementById("authWelcome").textContent =
-          "¡Hola, " + firstName(u) + "!";
-        document.getElementById("authEmail").textContent = u.email || "";
-      }
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
-
-    async function ensureAuth() {
-      if (auth.currentUser) return auth.currentUser;
-      await signInAnonymously(auth);
-      return new Promise((resolve, reject) => {
-        const unsub = onAuthStateChanged(auth, (u) => {
-          if (u) { unsub(); resolve(u); }
-        });
-        setTimeout(() => reject(new Error("Auth timeout")), 15000);
+    function when(ms) {
+      if (!ms) return "—";
+      return new Date(ms).toLocaleString("es", {
+        weekday: "short", day: "numeric", month: "short",
+        hour: "2-digit", minute: "2-digit",
       });
     }
 
-    async function finishRedirectIfAny() {
+    function showGate(err) {
+      gate.hidden = false;
+      appEl.hidden = true;
+      gateErr.hidden = !err;
+      gateErr.textContent = err || "";
+    }
+
+    function showApp(u) {
+      gate.hidden = true;
+      appEl.hidden = false;
+      document.getElementById("hello").textContent = "¡Hola, " + firstName(u) + "!";
+      document.getElementById("emailLine").textContent = u.email || "";
+    }
+
+    async function finishRedirect() {
       try {
         await getRedirectResult(auth);
       } catch (e) {
@@ -185,133 +208,64 @@
             code === "auth/email-already-in-use" ||
             code === "auth/account-exists-with-different-credential") {
           const cred = GoogleAuthProvider.credentialFromError(e);
-          if (cred) {
-            await signInWithCredential(auth, cred);
-            return;
-          }
+          if (cred) await signInWithCredential(auth, cred);
+        } else {
+          console.warn(e);
         }
-        console.warn("redirect", e);
       }
     }
 
-    async function continueWithGoogle() {
-      const btn = document.getElementById("googleBtn");
-      btn.disabled = true;
+    async function loginGoogle() {
+      googleBtn.disabled = true;
+      document.getElementById("gateHint").textContent = "Abriendo Google…";
       try {
-        await ensureAuth();
-        if (isGoogleUser(auth.currentUser)) {
-          updateAuthUi();
-          await refreshList();
-          return;
-        }
-        if (prefersRedirectAuth()) {
-          await signInWithRedirect(auth, googleProvider);
+        if (mobile()) {
+          await signInWithRedirect(auth, provider);
           return;
         }
         try {
-          await signInWithPopup(auth, googleProvider);
+          await signInWithPopup(auth, provider);
         } catch (e) {
-          const code = e && e.code;
-          if (code === "auth/popup-blocked" ||
-              code === "auth/operation-not-supported-in-this-environment" ||
-              code === "auth/cancelled-popup-request") {
-            await signInWithRedirect(auth, googleProvider);
+          if (e && (e.code === "auth/popup-blocked" ||
+              e.code === "auth/operation-not-supported-in-this-environment" ||
+              e.code === "auth/cancelled-popup-request")) {
+            await signInWithRedirect(auth, provider);
             return;
           }
           throw e;
         }
-        updateAuthUi();
-        await refreshList();
       } catch (e) {
-        console.error(e);
         if (e && e.code === "auth/popup-closed-by-user") {
-          showErr("Cerraste la ventana de Google. Tocá de nuevo cuando quieras.");
+          showGate("Cerraste la ventana. Probá de nuevo cuando quieras.");
         } else {
-          showErr(e.message || "No se pudo iniciar con Google.");
+          showGate(e.message || "No se pudo iniciar sesión.");
         }
       } finally {
-        btn.disabled = false;
+        googleBtn.disabled = false;
+        document.getElementById("gateHint").textContent =
+          "Quedás logueado en este navegador.";
       }
     }
 
-    function formatWhen(ms) {
-      if (!ms) return "—";
-      return new Date(ms).toLocaleString("es", {
-        weekday: "short", day: "numeric", month: "short",
-        hour: "2-digit", minute: "2-digit",
-      });
-    }
-
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
-    function eventCard(ev, opts) {
-      const mineLabel = opts && opts.mineLabel;
-      const canLeave = opts && opts.canLeave;
-      const wrap = document.createElement("div");
-      wrap.className = "card";
+    function card(ev, badge) {
       const a = document.createElement("a");
-      a.className = "card-link";
+      a.className = "card";
       a.href = "../e/?id=" + encodeURIComponent(ev.id);
-      const typeLabel = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
-      const spots = (ev.joinedCount || 0) + " de " + (ev.capacity || 0) + " plazas";
+      const type = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
+      const spots = (ev.joinedCount || 0) + " / " + (ev.capacity || 0) + " plazas";
       a.innerHTML =
-        (mineLabel ? '<span class="badge-mine">' + mineLabel + "</span>" : "") +
-        '<span class="chip">' + typeLabel + "</span>" +
+        (badge ? '<span class="badge">' + badge + "</span>" : "") +
+        '<span class="chip">' + type + "</span>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
-        '<p class="meta">' + formatWhen(ev.startsAtEpochMs) + "</p>" +
-        '<p class="meta">' + escapeHtml(ev.zone || ev.venueText || "") + "</p>" +
-        '<p class="meta">' + spots +
-          (ev.waitlistCount ? " · " + ev.waitlistCount + " reserva" : "") +
-        "</p>";
-      wrap.appendChild(a);
-      if (canLeave) {
-        const leave = document.createElement("button");
-        leave.type = "button";
-        leave.className = "btn btn-danger";
-        leave.textContent = "Borrarme";
-        leave.addEventListener("click", (e) => {
-          e.preventDefault();
-          leaveEvent(ev.id, leave);
-        });
-        wrap.appendChild(leave);
-      }
-      return wrap;
+        '<p class="meta">' + when(ev.startsAtEpochMs) + "</p>" +
+        (ev.zone || ev.venueText
+          ? '<p class="meta">' + escapeHtml(ev.zone || ev.venueText) + "</p>"
+          : "") +
+        '<p class="meta">' + spots + "</p>";
+      return a;
     }
 
-    async function leaveEvent(eventId, btn) {
-      const u = auth && auth.currentUser;
-      if (!isGoogleUser(u)) return;
-      if (!confirm("¿Seguro que querés borrarte de este evento?")) return;
-      if (btn) btn.disabled = true;
-      try {
-        const signupRef = doc(db, "open_events", eventId, "signups", u.uid);
-        const mine = await getDoc(signupRef);
-        if (!mine.exists()) throw new Error("No encontramos tu inscripción.");
-        await deleteDoc(signupRef);
-        const snap = await getDocs(collection(db, "open_events", eventId, "signups"));
-        let joinedCount = 0;
-        let waitlistCount = 0;
-        snap.forEach((d) => {
-          const st = d.data().status;
-          if (st === "waitlist") waitlistCount++;
-          else joinedCount++;
-        });
-        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
-        await refreshList();
-      } catch (e) {
-        console.error(e);
-        showErr(e.message || "No se pudo borrar.");
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function loadOpenEvents() {
+    async function loadOpen() {
       const q = query(
         collection(db, "open_events"),
         where("status", "==", "open"),
@@ -323,68 +277,50 @@
       return list;
     }
 
-    async function loadMySignups() {
-      const u = auth.currentUser;
-      if (!isGoogleUser(u)) return { needLogin: true, items: [] };
-      const q = query(
-        collectionGroup(db, "signups"),
-        where("uid", "==", u.uid),
-      );
+    async function loadMine(uid) {
+      const q = query(collectionGroup(db, "signups"), where("uid", "==", uid));
       const snap = await getDocs(q);
       const items = [];
       for (const d of snap.docs) {
-        const eventRef = d.ref.parent.parent;
-        if (!eventRef) continue;
-        const evSnap = await getDoc(eventRef);
-        if (!evSnap.exists()) continue;
-        const data = evSnap.data();
+        const er = d.ref.parent.parent;
+        if (!er) continue;
+        const ev = await getDoc(er);
+        if (!ev.exists()) continue;
         items.push({
-          id: evSnap.id,
-          ...data,
-          _signupStatus: d.data().status,
+          id: ev.id,
+          ...ev.data(),
+          _st: d.data().status,
         });
       }
       items.sort((a, b) => (a.startsAtEpochMs || 0) - (b.startsAtEpochMs || 0));
-      return { needLogin: false, items };
+      return items;
     }
 
-    async function refreshList() {
-      showErr("");
+    async function refresh() {
+      listErr.hidden = true;
       listEl.className = "loading";
       listEl.textContent = "Cargando…";
-      if (!firebaseReady || !db) {
-        listEl.className = "err";
-        listEl.textContent = "Falta firebase-config.js (../e/firebase-config.js).";
-        return;
-      }
       try {
+        listEl.className = "";
+        listEl.innerHTML = "";
         if (tab === "open") {
-          const list = await loadOpenEvents();
-          listEl.className = "";
-          listEl.innerHTML = "";
-          if (list.length === 0) {
+          const list = await loadOpen();
+          if (!list.length) {
             listEl.className = "empty";
             listEl.textContent = "No hay eventos abiertos por ahora.";
             return;
           }
-          list.forEach((ev) => listEl.appendChild(eventCard(ev)));
+          list.forEach((ev) => listEl.appendChild(card(ev)));
         } else {
-          const { needLogin, items } = await loadMySignups();
-          listEl.className = "";
-          listEl.innerHTML = "";
-          if (needLogin) {
+          const items = await loadMine(auth.currentUser.uid);
+          if (!items.length) {
             listEl.className = "empty";
-            listEl.textContent = "Iniciá sesión con Google para ver tus inscripciones.";
-            return;
-          }
-          if (items.length === 0) {
-            listEl.className = "empty";
-            listEl.textContent = "Todavía no estás apuntado a ningún evento.";
+            listEl.textContent = "Todavía no te anotaste a ningún evento. Mirá Abiertos.";
             return;
           }
           items.forEach((ev) => {
-            const label = ev._signupStatus === "waitlist" ? "Reserva" : "Inscrito";
-            listEl.appendChild(eventCard(ev, { mineLabel: label, canLeave: true }));
+            const badge = ev._st === "waitlist" ? "Reserva" : "Inscrito";
+            listEl.appendChild(card(ev, badge));
           });
         }
       } catch (e) {
@@ -392,56 +328,49 @@
         listEl.className = "err";
         listEl.textContent = e.message || "Error al cargar.";
         if (/index/i.test(String(e.message))) {
-          listEl.textContent +=
-            " (Firebase puede pedir crear un índice; abrí el link del error en la consola.)";
+          listEl.textContent += " Abrí el link del índice en la consola del navegador.";
         }
       }
     }
 
-    document.getElementById("googleBtn").addEventListener("click", continueWithGoogle);
+    function setTab(next) {
+      tab = next;
+      document.getElementById("tabOpen").classList.toggle("active", next === "open");
+      document.getElementById("tabMine").classList.toggle("active", next === "mine");
+      refresh();
+    }
+
+    googleBtn.addEventListener("click", loginGoogle);
     document.getElementById("signOutBtn").addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-        await signInAnonymously(auth);
-        updateAuthUi();
-        if (tab === "mine") await refreshList();
-      } catch (e) {
-        showErr(e.message || "No se pudo cerrar sesión.");
-      }
+      await signOut(auth);
+      showGate("");
     });
+    document.getElementById("tabOpen").addEventListener("click", () => setTab("open"));
+    document.getElementById("tabMine").addEventListener("click", () => setTab("mine"));
 
-    document.getElementById("tabOpen").addEventListener("click", () => {
-      tab = "open";
-      document.getElementById("tabOpen").classList.add("active");
-      document.getElementById("tabMine").classList.remove("active");
-      refreshList();
-    });
-    document.getElementById("tabMine").addEventListener("click", () => {
-      tab = "mine";
-      document.getElementById("tabMine").classList.add("active");
-      document.getElementById("tabOpen").classList.remove("active");
-      refreshList();
-    });
-
-    if (!firebaseReady) {
-      listEl.className = "err";
-      listEl.textContent = "Configurá Firebase (e/firebase-config.js en el host).";
+    if (!ready) {
+      showGate("Falta configurar Firebase en el sitio.");
     } else {
       const app = initializeApp(cfg);
       auth = getAuth(app);
       db = getFirestore(app);
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-      } catch (_) {}
-      await finishRedirectIfAny();
-      try {
-        await ensureAuth();
-      } catch (_) {}
-      onAuthStateChanged(auth, () => {
-        updateAuthUi();
+      try { await setPersistence(auth, browserLocalPersistence); } catch (_) {}
+      await finishRedirect();
+
+      onAuthStateChanged(auth, async (u) => {
+        if (isGoogle(u)) {
+          showApp(u);
+          if (!booted) {
+            booted = true;
+            await refresh();
+          } else if (!appEl.hidden) {
+            await refresh();
+          }
+        } else {
+          booted = false;
+          showGate("");
+        }
       });
-      updateAuthUi();
-      await refreshList();
     }
   </script>
 </body>
