@@ -30,7 +30,7 @@
       background: var(--card); border-radius: 14px; padding: 14px 16px;
       margin-bottom: 18px; border: 1px solid #2a5070;
     }
-    .auth strong { color: var(--accent); }
+    .auth .welcome { margin: 0; color: var(--accent); font-weight: 700; font-size: 1.1rem; }
     .auth .meta { color: var(--muted); font-size: .9rem; margin-top: 4px; }
     .tabs {
       display: flex; gap: 8px; margin-bottom: 14px;
@@ -46,9 +46,12 @@
     .card {
       background: var(--card); border-radius: 16px; padding: 16px 18px;
       margin-bottom: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.25);
+      color: inherit; display: block;
+    }
+    .card-link {
       text-decoration: none; color: inherit; display: block;
     }
-    .card:hover { outline: 1px solid var(--accent); }
+    .card-link:hover h2 { color: var(--accent); }
     .chip {
       display: inline-block; background: var(--chip); color: #fff;
       font-size: .7rem; font-weight: 700; letter-spacing: .04em;
@@ -64,6 +67,10 @@
     }
     .btn-secondary {
       background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    }
+    .btn-danger {
+      background: transparent; color: var(--danger); border: 1px solid var(--danger);
+      margin-top: 8px;
     }
     .btn:disabled { opacity: .55; cursor: not-allowed; }
     .btn-google {
@@ -87,10 +94,10 @@
     <div class="auth" id="authBox">
       <div id="authLoggedOut">
         <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
-        <p class="meta" style="margin-top:10px">Para ver “Mis inscripciones” y apuntarte en un clic.</p>
+        <p class="meta" style="margin-top:10px">Una vez: elegís la cuenta. Después quedás logueado acá.</p>
       </div>
       <div id="authLoggedIn" hidden>
-        <div><strong id="authName">—</strong></div>
+        <p class="welcome" id="authWelcome">¡Hola!</p>
         <div class="meta" id="authEmail">—</div>
         <button type="button" class="btn btn-secondary" id="signOutBtn">Cerrar sesión</button>
       </div>
@@ -109,12 +116,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
       getAuth, signInAnonymously, signOut, onAuthStateChanged,
-      GoogleAuthProvider, linkWithPopup, signInWithPopup, linkWithRedirect,
-      signInWithRedirect, getRedirectResult,
+      GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+      signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, collection, query, where, orderBy, getDocs, getDoc, doc,
-      collectionGroup,
+      collectionGroup, deleteDoc, updateDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const cfg = window.FIXTUREGO_FIREBASE;
@@ -125,7 +132,6 @@
     let auth = null;
     let db = null;
     const googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: "select_account" });
 
     function prefersRedirectAuth() {
       const ua = navigator.userAgent || "";
@@ -135,6 +141,11 @@
     function isGoogleUser(u) {
       return !!(u && !u.isAnonymous && u.providerData &&
         u.providerData.some((p) => p.providerId === "google.com"));
+    }
+
+    function firstName(u) {
+      const full = (u && u.displayName) || "";
+      return full.trim().split(/\s+/)[0] || "jugador";
     }
 
     function showErr(msg) {
@@ -148,7 +159,8 @@
       document.getElementById("authLoggedOut").hidden = google;
       document.getElementById("authLoggedIn").hidden = !google;
       if (google) {
-        document.getElementById("authName").textContent = u.displayName || "Jugador";
+        document.getElementById("authWelcome").textContent =
+          "¡Hola, " + firstName(u) + "!";
         document.getElementById("authEmail").textContent = u.email || "";
       }
     }
@@ -164,60 +176,59 @@
       });
     }
 
-    async function startGoogleRedirect() {
-      const current = auth.currentUser;
-      if (current && current.isAnonymous) {
-        await linkWithRedirect(current, googleProvider);
-      } else {
-        await signInWithRedirect(auth, googleProvider);
+    async function finishRedirectIfAny() {
+      try {
+        await getRedirectResult(auth);
+      } catch (e) {
+        const code = e && e.code;
+        if (code === "auth/credential-already-in-use" ||
+            code === "auth/email-already-in-use" ||
+            code === "auth/account-exists-with-different-credential") {
+          const cred = GoogleAuthProvider.credentialFromError(e);
+          if (cred) {
+            await signInWithCredential(auth, cred);
+            return;
+          }
+        }
+        console.warn("redirect", e);
       }
     }
 
-    async function linkOrSignInGoogle() {
+    async function continueWithGoogle() {
       const btn = document.getElementById("googleBtn");
       btn.disabled = true;
       try {
         await ensureAuth();
-        if (prefersRedirectAuth()) {
-          await startGoogleRedirect();
+        if (isGoogleUser(auth.currentUser)) {
+          updateAuthUi();
+          await refreshList();
           return;
         }
-        const current = auth.currentUser;
+        if (prefersRedirectAuth()) {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        }
         try {
-          if (current && current.isAnonymous) {
-            await linkWithPopup(current, googleProvider);
-          } else {
-            await signInWithPopup(auth, googleProvider);
-          }
+          await signInWithPopup(auth, googleProvider);
         } catch (e) {
           const code = e && e.code;
-          if (code === "auth/credential-already-in-use" ||
-              code === "auth/email-already-in-use" ||
-              code === "auth/account-exists-with-different-credential") {
-            try {
-              await signInWithPopup(auth, googleProvider);
-            } catch (e2) {
-              if (e2 && (e2.code === "auth/popup-blocked" ||
-                  e2.code === "auth/operation-not-supported-in-this-environment")) {
-                await startGoogleRedirect();
-                return;
-              }
-              throw e2;
-            }
-          } else if (code === "auth/popup-blocked" ||
+          if (code === "auth/popup-blocked" ||
               code === "auth/operation-not-supported-in-this-environment" ||
               code === "auth/cancelled-popup-request") {
-            await startGoogleRedirect();
+            await signInWithRedirect(auth, googleProvider);
             return;
-          } else {
-            throw e;
           }
+          throw e;
         }
         updateAuthUi();
         await refreshList();
       } catch (e) {
         console.error(e);
-        showErr(e.message || "No se pudo iniciar con Google.");
+        if (e && e.code === "auth/popup-closed-by-user") {
+          showErr("Cerraste la ventana de Google. Tocá de nuevo cuando quieras.");
+        } else {
+          showErr(e.message || "No se pudo iniciar con Google.");
+        }
       } finally {
         btn.disabled = false;
       }
@@ -231,9 +242,21 @@
       });
     }
 
-    function eventCard(ev, mineLabel) {
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function eventCard(ev, opts) {
+      const mineLabel = opts && opts.mineLabel;
+      const canLeave = opts && opts.canLeave;
+      const wrap = document.createElement("div");
+      wrap.className = "card";
       const a = document.createElement("a");
-      a.className = "card";
+      a.className = "card-link";
       a.href = "../e/?id=" + encodeURIComponent(ev.id);
       const typeLabel = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
       const spots = (ev.joinedCount || 0) + " de " + (ev.capacity || 0) + " plazas";
@@ -246,15 +269,46 @@
         '<p class="meta">' + spots +
           (ev.waitlistCount ? " · " + ev.waitlistCount + " reserva" : "") +
         "</p>";
-      return a;
+      wrap.appendChild(a);
+      if (canLeave) {
+        const leave = document.createElement("button");
+        leave.type = "button";
+        leave.className = "btn btn-danger";
+        leave.textContent = "Borrarme";
+        leave.addEventListener("click", (e) => {
+          e.preventDefault();
+          leaveEvent(ev.id, leave);
+        });
+        wrap.appendChild(leave);
+      }
+      return wrap;
     }
 
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    async function leaveEvent(eventId, btn) {
+      const u = auth && auth.currentUser;
+      if (!isGoogleUser(u)) return;
+      if (!confirm("¿Seguro que querés borrarte de este evento?")) return;
+      if (btn) btn.disabled = true;
+      try {
+        const signupRef = doc(db, "open_events", eventId, "signups", u.uid);
+        const mine = await getDoc(signupRef);
+        if (!mine.exists()) throw new Error("No encontramos tu inscripción.");
+        await deleteDoc(signupRef);
+        const snap = await getDocs(collection(db, "open_events", eventId, "signups"));
+        let joinedCount = 0;
+        let waitlistCount = 0;
+        snap.forEach((d) => {
+          const st = d.data().status;
+          if (st === "waitlist") waitlistCount++;
+          else joinedCount++;
+        });
+        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
+        await refreshList();
+      } catch (e) {
+        console.error(e);
+        showErr(e.message || "No se pudo borrar.");
+        if (btn) btn.disabled = false;
+      }
     }
 
     async function loadOpenEvents() {
@@ -330,7 +384,7 @@
           }
           items.forEach((ev) => {
             const label = ev._signupStatus === "waitlist" ? "Reserva" : "Inscrito";
-            listEl.appendChild(eventCard(ev, label));
+            listEl.appendChild(eventCard(ev, { mineLabel: label, canLeave: true }));
           });
         }
       } catch (e) {
@@ -344,7 +398,7 @@
       }
     }
 
-    document.getElementById("googleBtn").addEventListener("click", linkOrSignInGoogle);
+    document.getElementById("googleBtn").addEventListener("click", continueWithGoogle);
     document.getElementById("signOutBtn").addEventListener("click", async () => {
       try {
         await signOut(auth);
@@ -377,10 +431,9 @@
       auth = getAuth(app);
       db = getFirestore(app);
       try {
-        await getRedirectResult(auth);
-      } catch (e) {
-        console.warn("redirect", e);
-      }
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (_) {}
+      await finishRedirectIfAny();
       try {
         await ensureAuth();
       } catch (_) {}
