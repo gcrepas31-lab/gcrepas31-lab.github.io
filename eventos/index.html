@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FixtureGo · Eventos abiertos</title>
+  <meta name="description" content="Inscripciones abiertas y tus eventos en FixtureGo Padel." />
+  <style>
+    :root {
+      --bg: #0b1f2e;
+      --card: #123049;
+      --text: #f4f7fb;
+      --muted: #9fb3c8;
+      --accent: #7ed957;
+      --chip: #1e4d7a;
+      --danger: #ffb4a8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1a4a6e, var(--bg));
+      color: var(--text);
+      padding: 28px 18px 48px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin: 0 0 6px; font-weight: 700; }
+    .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+    .auth {
+      background: var(--card); border-radius: 14px; padding: 14px 16px;
+      margin-bottom: 18px; border: 1px solid #2a5070;
+    }
+    .auth strong { color: var(--accent); }
+    .auth .meta { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .tabs {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .tab {
+      flex: 1; padding: 10px 12px; border-radius: 999px; border: 1px solid #2a5070;
+      background: transparent; color: var(--muted); font-weight: 700; cursor: pointer;
+      font-size: .9rem;
+    }
+    .tab.active {
+      background: var(--accent); color: #0b1f2e; border-color: transparent;
+    }
+    .card {
+      background: var(--card); border-radius: 16px; padding: 16px 18px;
+      margin-bottom: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.25);
+      text-decoration: none; color: inherit; display: block;
+    }
+    .card:hover { outline: 1px solid var(--accent); }
+    .chip {
+      display: inline-block; background: var(--chip); color: #fff;
+      font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+      padding: 3px 9px; border-radius: 999px; margin-bottom: 8px;
+    }
+    .card h2 { font-size: 1.15rem; margin: 0 0 6px; }
+    .meta { color: var(--muted); font-size: .92rem; margin: 3px 0; }
+    .btn {
+      display: block; width: 100%; margin: 10px 0 0; text-align: center;
+      background: var(--accent); color: #0b1f2e; font-weight: 700; border: none;
+      padding: 12px 16px; border-radius: 999px; cursor: pointer; font-size: .95rem;
+      text-decoration: none;
+    }
+    .btn-secondary {
+      background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-google {
+      background: #fff; color: #1f1f1f; border: none;
+    }
+    .empty, .err, .loading {
+      text-align: center; color: var(--muted); padding: 28px 12px; font-size: .95rem;
+    }
+    .err { color: var(--danger); }
+    .badge-mine {
+      float: right; font-size: .72rem; color: var(--accent); font-weight: 700;
+    }
+  </style>
+  <script src="../e/firebase-config.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>FixtureGo</h1>
+    <p class="sub">Inscripciones abiertas y tus eventos.</p>
+
+    <div class="auth" id="authBox">
+      <div id="authLoggedOut">
+        <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
+        <p class="meta" style="margin-top:10px">Para ver “Mis inscripciones” y apuntarte en un clic.</p>
+      </div>
+      <div id="authLoggedIn" hidden>
+        <div><strong id="authName">—</strong></div>
+        <div class="meta" id="authEmail">—</div>
+        <button type="button" class="btn btn-secondary" id="signOutBtn">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button type="button" class="tab active" id="tabOpen" data-tab="open">Abiertos</button>
+      <button type="button" class="tab" id="tabMine" data-tab="mine">Mis inscripciones</button>
+    </div>
+
+    <div id="list" class="loading">Cargando…</div>
+    <p class="err" id="err" hidden></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import {
+      getAuth, signInAnonymously, signOut, onAuthStateChanged,
+      GoogleAuthProvider, linkWithPopup, signInWithPopup, linkWithRedirect,
+      signInWithRedirect, getRedirectResult,
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, orderBy, getDocs, getDoc, doc,
+      collectionGroup,
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const cfg = window.FIXTUREGO_FIREBASE;
+    const firebaseReady = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
+    const listEl = document.getElementById("list");
+    const errEl = document.getElementById("err");
+    let tab = "open";
+    let auth = null;
+    let db = null;
+    const googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+
+    function prefersRedirectAuth() {
+      const ua = navigator.userAgent || "";
+      return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(ua);
+    }
+
+    function isGoogleUser(u) {
+      return !!(u && !u.isAnonymous && u.providerData &&
+        u.providerData.some((p) => p.providerId === "google.com"));
+    }
+
+    function showErr(msg) {
+      errEl.hidden = !msg;
+      errEl.textContent = msg || "";
+    }
+
+    function updateAuthUi() {
+      const u = auth && auth.currentUser;
+      const google = isGoogleUser(u);
+      document.getElementById("authLoggedOut").hidden = google;
+      document.getElementById("authLoggedIn").hidden = !google;
+      if (google) {
+        document.getElementById("authName").textContent = u.displayName || "Jugador";
+        document.getElementById("authEmail").textContent = u.email || "";
+      }
+    }
+
+    async function ensureAuth() {
+      if (auth.currentUser) return auth.currentUser;
+      await signInAnonymously(auth);
+      return new Promise((resolve, reject) => {
+        const unsub = onAuthStateChanged(auth, (u) => {
+          if (u) { unsub(); resolve(u); }
+        });
+        setTimeout(() => reject(new Error("Auth timeout")), 15000);
+      });
+    }
+
+    async function startGoogleRedirect() {
+      const current = auth.currentUser;
+      if (current && current.isAnonymous) {
+        await linkWithRedirect(current, googleProvider);
+      } else {
+        await signInWithRedirect(auth, googleProvider);
+      }
+    }
+
+    async function linkOrSignInGoogle() {
+      const btn = document.getElementById("googleBtn");
+      btn.disabled = true;
+      try {
+        await ensureAuth();
+        if (prefersRedirectAuth()) {
+          await startGoogleRedirect();
+          return;
+        }
+        const current = auth.currentUser;
+        try {
+          if (current && current.isAnonymous) {
+            await linkWithPopup(current, googleProvider);
+          } else {
+            await signInWithPopup(auth, googleProvider);
+          }
+        } catch (e) {
+          const code = e && e.code;
+          if (code === "auth/credential-already-in-use" ||
+              code === "auth/email-already-in-use" ||
+              code === "auth/account-exists-with-different-credential") {
+            try {
+              await signInWithPopup(auth, googleProvider);
+            } catch (e2) {
+              if (e2 && (e2.code === "auth/popup-blocked" ||
+                  e2.code === "auth/operation-not-supported-in-this-environment")) {
+                await startGoogleRedirect();
+                return;
+              }
+              throw e2;
+            }
+          } else if (code === "auth/popup-blocked" ||
+              code === "auth/operation-not-supported-in-this-environment" ||
+              code === "auth/cancelled-popup-request") {
+            await startGoogleRedirect();
+            return;
+          } else {
+            throw e;
+          }
+        }
+        updateAuthUi();
+        await refreshList();
+      } catch (e) {
+        console.error(e);
+        showErr(e.message || "No se pudo iniciar con Google.");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function formatWhen(ms) {
+      if (!ms) return "—";
+      return new Date(ms).toLocaleString("es", {
+        weekday: "short", day: "numeric", month: "short",
+        hour: "2-digit", minute: "2-digit",
+      });
+    }
+
+    function eventCard(ev, mineLabel) {
+      const a = document.createElement("a");
+      a.className = "card";
+      a.href = "../e/?id=" + encodeURIComponent(ev.id);
+      const typeLabel = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
+      const spots = (ev.joinedCount || 0) + " de " + (ev.capacity || 0) + " plazas";
+      a.innerHTML =
+        (mineLabel ? '<span class="badge-mine">' + mineLabel + "</span>" : "") +
+        '<span class="chip">' + typeLabel + "</span>" +
+        "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
+        '<p class="meta">' + formatWhen(ev.startsAtEpochMs) + "</p>" +
+        '<p class="meta">' + escapeHtml(ev.zone || ev.venueText || "") + "</p>" +
+        '<p class="meta">' + spots +
+          (ev.waitlistCount ? " · " + ev.waitlistCount + " reserva" : "") +
+        "</p>";
+      return a;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function loadOpenEvents() {
+      const q = query(
+        collection(db, "open_events"),
+        where("status", "==", "open"),
+        orderBy("startsAtEpochMs", "asc"),
+      );
+      const snap = await getDocs(q);
+      const list = [];
+      snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+      return list;
+    }
+
+    async function loadMySignups() {
+      const u = auth.currentUser;
+      if (!isGoogleUser(u)) return { needLogin: true, items: [] };
+      const q = query(
+        collectionGroup(db, "signups"),
+        where("uid", "==", u.uid),
+      );
+      const snap = await getDocs(q);
+      const items = [];
+      for (const d of snap.docs) {
+        const eventRef = d.ref.parent.parent;
+        if (!eventRef) continue;
+        const evSnap = await getDoc(eventRef);
+        if (!evSnap.exists()) continue;
+        const data = evSnap.data();
+        items.push({
+          id: evSnap.id,
+          ...data,
+          _signupStatus: d.data().status,
+        });
+      }
+      items.sort((a, b) => (a.startsAtEpochMs || 0) - (b.startsAtEpochMs || 0));
+      return { needLogin: false, items };
+    }
+
+    async function refreshList() {
+      showErr("");
+      listEl.className = "loading";
+      listEl.textContent = "Cargando…";
+      if (!firebaseReady || !db) {
+        listEl.className = "err";
+        listEl.textContent = "Falta firebase-config.js (../e/firebase-config.js).";
+        return;
+      }
+      try {
+        if (tab === "open") {
+          const list = await loadOpenEvents();
+          listEl.className = "";
+          listEl.innerHTML = "";
+          if (list.length === 0) {
+            listEl.className = "empty";
+            listEl.textContent = "No hay eventos abiertos por ahora.";
+            return;
+          }
+          list.forEach((ev) => listEl.appendChild(eventCard(ev)));
+        } else {
+          const { needLogin, items } = await loadMySignups();
+          listEl.className = "";
+          listEl.innerHTML = "";
+          if (needLogin) {
+            listEl.className = "empty";
+            listEl.textContent = "Iniciá sesión con Google para ver tus inscripciones.";
+            return;
+          }
+          if (items.length === 0) {
+            listEl.className = "empty";
+            listEl.textContent = "Todavía no estás apuntado a ningún evento.";
+            return;
+          }
+          items.forEach((ev) => {
+            const label = ev._signupStatus === "waitlist" ? "Reserva" : "Inscrito";
+            listEl.appendChild(eventCard(ev, label));
+          });
+        }
+      } catch (e) {
+        console.error(e);
+        listEl.className = "err";
+        listEl.textContent = e.message || "Error al cargar.";
+        if (/index/i.test(String(e.message))) {
+          listEl.textContent +=
+            " (Firebase puede pedir crear un índice; abrí el link del error en la consola.)";
+        }
+      }
+    }
+
+    document.getElementById("googleBtn").addEventListener("click", linkOrSignInGoogle);
+    document.getElementById("signOutBtn").addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        await signInAnonymously(auth);
+        updateAuthUi();
+        if (tab === "mine") await refreshList();
+      } catch (e) {
+        showErr(e.message || "No se pudo cerrar sesión.");
+      }
+    });
+
+    document.getElementById("tabOpen").addEventListener("click", () => {
+      tab = "open";
+      document.getElementById("tabOpen").classList.add("active");
+      document.getElementById("tabMine").classList.remove("active");
+      refreshList();
+    });
+    document.getElementById("tabMine").addEventListener("click", () => {
+      tab = "mine";
+      document.getElementById("tabMine").classList.add("active");
+      document.getElementById("tabOpen").classList.remove("active");
+      refreshList();
+    });
+
+    if (!firebaseReady) {
+      listEl.className = "err";
+      listEl.textContent = "Configurá Firebase (e/firebase-config.js en el host).";
+    } else {
+      const app = initializeApp(cfg);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      try {
+        await getRedirectResult(auth);
+      } catch (e) {
+        console.warn("redirect", e);
+      }
+      try {
+        await ensureAuth();
+      } catch (_) {}
+      onAuthStateChanged(auth, () => {
+        updateAuthUi();
+      });
+      updateAuthUi();
+      await refreshList();
+    }
+  </script>
+</body>
+</html>
