@@ -66,6 +66,17 @@
       background: #fff; color: #1f1f1f; border: none;
       display: flex; align-items: center; justify-content: center; gap: 10px;
     }
+    .btn-danger {
+      background: transparent; color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    .auth-session {
+      background: #0e2a40; border-radius: 12px; padding: 12px 14px;
+      margin: 0 0 14px; border: 1px solid #2a5070;
+    }
+    .auth-session .welcome {
+      margin: 0; font-weight: 700; color: var(--accent); font-size: 1.05rem;
+    }
     .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 8px 0 0; }
     .msg { text-align: center; margin-top: 10px; font-size: .95rem; }
     .msg.ok { color: var(--accent); }
@@ -114,9 +125,17 @@
         <p class="meta" id="rosterWait" hidden></p>
       </div>
 
+      <div id="sessionBox" class="auth-session" hidden>
+        <p class="welcome" id="welcomeLine">¡Hola!</p>
+        <p class="meta" id="sessionEmail" style="margin:0"></p>
+        <button type="button" class="btn btn-secondary" id="signOutBtn" style="margin-top:10px">
+          Cerrar sesión
+        </button>
+      </div>
+
       <div id="googleBox" hidden>
         <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
-        <p class="note">La próxima vez ya estarás logueado: un clic para inscribirte.</p>
+        <p class="note">Una vez: elegís la cuenta. Después quedás logueado en este navegador.</p>
       </div>
 
       <div id="oneClickBox" hidden>
@@ -125,9 +144,6 @@
         <button type="button" class="btn" id="oneClickBtn">Inscribirme</button>
         <button type="button" class="btn btn-secondary" id="manualInsteadBtn" style="margin-top:8px">
           Usar otro nombre / email
-        </button>
-        <button type="button" class="btn btn-secondary" id="signOutBtn" style="margin-top:8px">
-          Cerrar sesión
         </button>
       </div>
 
@@ -143,7 +159,10 @@
       <div id="doneBox" hidden>
         <strong id="doneTitle">¡Inscripción confirmada!</strong>
         <p class="meta" id="doneSub" style="margin-top:8px">Ya figurás en la lista. Abrí la app para seguir el evento.</p>
-        <button type="button" class="btn btn-secondary" id="anotherBtn" style="margin-top:12px">
+        <button type="button" class="btn btn-danger" id="leaveBtn" style="margin-top:12px">
+          Borrarme de este evento
+        </button>
+        <button type="button" class="btn btn-secondary" id="anotherBtn" style="margin-top:8px">
           Anotar a otra persona
         </button>
       </div>
@@ -162,11 +181,11 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
       getAuth, signInAnonymously, signOut, onAuthStateChanged,
-      GoogleAuthProvider, linkWithPopup, signInWithPopup, linkWithRedirect,
-      signInWithRedirect, getRedirectResult,
+      GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+      signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc,
+      getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc, deleteDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     const params = new URLSearchParams(location.search);
@@ -255,7 +274,6 @@
     let db = null;
     let auth = null;
     const googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: "select_account" });
 
     function isGoogleUser(u) {
       return !!(u && !u.isAnonymous && u.providerData &&
@@ -267,11 +285,28 @@
       return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(ua);
     }
 
+    function firstName(u) {
+      const full = (u && u.displayName) || "";
+      return full.trim().split(/\s+/)[0] || "jugador";
+    }
+
     function updateAuthUi() {
       const u = auth && auth.currentUser;
       const google = isGoogleUser(u);
+      const sessionBox = document.getElementById("sessionBox");
       const googleBox = document.getElementById("googleBox");
       const oneClick = document.getElementById("oneClickBox");
+
+      if (google) {
+        sessionBox.hidden = false;
+        document.getElementById("welcomeLine").textContent =
+          "¡Hola, " + firstName(u) + "!";
+        document.getElementById("sessionEmail").textContent = u.email || "";
+        googleBox.hidden = true;
+      } else {
+        sessionBox.hidden = true;
+      }
+
       if (mySignupStatus) {
         googleBox.hidden = true;
         oneClick.hidden = true;
@@ -283,91 +318,87 @@
         return;
       }
       if (google) {
-        googleBox.hidden = true;
         oneClick.hidden = false;
         const name = u.displayName || "";
         const email = u.email || "";
         document.getElementById("profileLine").textContent =
-          "Sesión: " + (name ? name + " · " : "") + email;
+          "Te inscribís como " + (name || email);
         document.getElementById("nameInput").value = name;
         document.getElementById("emailInput").value = email;
         document.getElementById("signupForm").hidden = true;
         document.getElementById("subtitle").textContent =
-          "Estás logueado en este navegador. Un clic para apuntarte.";
+          "Bienvenido. Un clic para apuntarte.";
       } else {
         googleBox.hidden = false;
         oneClick.hidden = true;
       }
     }
 
-    async function startGoogleRedirect() {
-      const current = auth.currentUser;
-      showMsg("Redirigiendo a Google…", false);
-      if (current && current.isAnonymous) {
-        await linkWithRedirect(current, googleProvider);
-      } else {
-        await signInWithRedirect(auth, googleProvider);
+    async function finishRedirectIfAny() {
+      try {
+        await getRedirectResult(auth);
+      } catch (e) {
+        const code = e && e.code;
+        if (code === "auth/credential-already-in-use" ||
+            code === "auth/email-already-in-use" ||
+            code === "auth/account-exists-with-different-credential") {
+          const cred = GoogleAuthProvider.credentialFromError(e);
+          if (cred) {
+            await signInWithCredential(auth, cred);
+            return;
+          }
+        }
+        console.warn("redirect", e);
       }
     }
 
-    async function linkOrSignInGoogle() {
+    async function continueWithGoogle() {
       if (!auth) return;
       const btn = document.getElementById("googleBtn");
       btn.disabled = true;
       try {
         await ensureAuth();
-        const current = auth.currentUser;
-        // Móvil / in-app browsers: redirect (el popup suele bloquearse)
+        if (isGoogleUser(auth.currentUser)) {
+          updateAuthUi();
+          await refreshRosterAndMine();
+          return;
+        }
+        // signIn (no link): evita el loop si esa cuenta Google ya existía
         if (prefersRedirectAuth()) {
-          await startGoogleRedirect();
+          showMsg("Redirigiendo a Google…", false);
+          await signInWithRedirect(auth, googleProvider);
           return;
         }
         try {
-          if (current && current.isAnonymous) {
-            await linkWithPopup(current, googleProvider);
-          } else {
-            await signInWithPopup(auth, googleProvider);
-          }
+          await signInWithPopup(auth, googleProvider);
         } catch (e) {
           const code = e && e.code;
-          if (code === "auth/credential-already-in-use" ||
-              code === "auth/email-already-in-use" ||
-              code === "auth/account-exists-with-different-credential") {
-            try {
-              await signInWithPopup(auth, googleProvider);
-            } catch (e2) {
-              if (e2 && (e2.code === "auth/popup-blocked" ||
-                  e2.code === "auth/operation-not-supported-in-this-environment")) {
-                await startGoogleRedirect();
-                return;
-              }
-              throw e2;
-            }
-          } else if (code === "auth/popup-blocked" ||
+          if (code === "auth/popup-blocked" ||
               code === "auth/operation-not-supported-in-this-environment" ||
               code === "auth/cancelled-popup-request") {
-            await startGoogleRedirect();
+            showMsg("Redirigiendo a Google…", false);
+            await signInWithRedirect(auth, googleProvider);
             return;
-          } else {
-            throw e;
           }
+          throw e;
         }
         updateAuthUi();
         await refreshRosterAndMine();
       } catch (e) {
         console.error(e);
         const code = e && e.code;
-        const friendly = code === "auth/popup-blocked"
-          ? "El navegador bloqueó la ventana de Google. Probá de nuevo (usaremos redirección)."
-          : (e.message || "No se pudo iniciar con Google.");
-        showMsg(friendly, true);
+        if (code === "auth/popup-closed-by-user") {
+          showMsg("Cerraste la ventana de Google. Tocá de nuevo cuando quieras.", true);
+        } else {
+          showMsg(e.message || "No se pudo iniciar con Google.", true);
+        }
         enableForm(true);
       } finally {
         btn.disabled = false;
       }
     }
 
-    document.getElementById("googleBtn").addEventListener("click", linkOrSignInGoogle);
+    document.getElementById("googleBtn").addEventListener("click", continueWithGoogle);
     document.getElementById("manualInsteadBtn").addEventListener("click", () => {
       document.getElementById("oneClickBox").hidden = true;
       enableForm(true);
@@ -389,6 +420,7 @@
         showMsg("No se pudo cerrar sesión.", true);
       }
     });
+    document.getElementById("leaveBtn").addEventListener("click", leaveEvent);
     document.getElementById("oneClickBtn").addEventListener("click", async () => {
       const u = auth && auth.currentUser;
       if (!isGoogleUser(u)) return;
@@ -402,10 +434,9 @@
       auth = getAuth(app);
       db = getFirestore(app);
       try {
-        await getRedirectResult(auth);
-      } catch (e) {
-        console.warn("redirect", e);
-      }
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (_) {}
+      await finishRedirectIfAny();
       try {
         const remote = await loadEvent(eventId);
         if (remote) {
@@ -433,8 +464,11 @@
           enableForm(false);
         }
       }
-      onAuthStateChanged(auth, () => {
-        if (!mySignupStatus) updateAuthUi();
+      onAuthStateChanged(auth, async () => {
+        updateAuthUi();
+        if (isGoogleUser(auth.currentUser)) {
+          await refreshRosterAndMine();
+        }
       });
     } else {
       document.getElementById("subtitle").textContent =
@@ -559,6 +593,57 @@
           : "Ya figurás en la lista. Abrí la app para seguir el evento.";
       document.getElementById("subtitle").textContent = "Ya estás apuntado a este evento.";
       document.getElementById("formMsg").hidden = true;
+      const canLeave = !!(auth && auth.currentUser);
+      document.getElementById("leaveBtn").hidden = !canLeave;
+      updateAuthUi();
+    }
+
+    async function leaveEvent() {
+      const u = auth && auth.currentUser;
+      if (!u || !db || !eventId) return;
+      const btn = document.getElementById("leaveBtn");
+      if (!confirm("¿Seguro que querés borrarte de este evento?")) return;
+      btn.disabled = true;
+      try {
+        const signupUid = window.__mineSignupUid || u.uid;
+        const signupRef = doc(db, "open_events", eventId, "signups", signupUid);
+        const mineSnap = await getDoc(signupRef);
+        if (!mineSnap.exists()) {
+          throw new Error("No encontramos tu inscripción con esta cuenta.");
+        }
+        // Solo podés borrar tu propio doc (reglas). Si el uid del doc ≠ Auth actual, no se puede.
+        if (signupUid !== u.uid) {
+          throw new Error(
+            "Esta plaza se anotó antes de Google. Pedile al organizador que te saque, o anotá de nuevo con esta cuenta."
+          );
+        }
+        await deleteDoc(signupRef);
+        const remaining = await loadSignups(eventId);
+        const joinedCount = remaining.filter((s) => s.status !== "waitlist").length;
+        const waitlistCount = remaining.filter((s) => s.status === "waitlist").length;
+        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
+        mySignupStatus = null;
+        document.getElementById("doneBox").hidden = true;
+        const fresh = await loadEvent(eventId);
+        if (fresh) {
+          eventState = fresh;
+          fillUi(eventState);
+        }
+        renderRoster(remaining);
+        updateAuthUi();
+        if (isGoogleUser(u)) {
+          document.getElementById("subtitle").textContent =
+            "Te borraste. Podés volver a inscribirte cuando quieras.";
+        } else {
+          enableForm(true);
+        }
+        showMsg("Te borraste del evento.", false);
+      } catch (e) {
+        console.error(e);
+        showMsg(e.message || "No se pudo borrar la inscripción.", true);
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     function showMsg(text, isErr) {
@@ -598,11 +683,22 @@
         }
         const signups = await loadSignups(eventId);
         renderRoster(signups);
-        const uid = auth && auth.currentUser ? auth.currentUser.uid : null;
-        const mine = uid ? signups.find((s) => s.uid === uid) : null;
+        const u = auth && auth.currentUser;
+        const uid = u ? u.uid : null;
+        const email = u && u.email ? u.email.toLowerCase() : "";
+        const mine = uid
+          ? signups.find((s) =>
+              s.uid === uid ||
+              (email && s.email && s.email.toLowerCase() === email)
+            )
+          : null;
         if (mine) {
           mySignupStatus = mine.status === "waitlist" ? "waitlist" : "confirmed";
+          // Guardar uid real del doc por si hay que borrar (inscripción previa anónima)
+          window.__mineSignupUid = mine.uid;
           showDone(mySignupStatus);
+        } else {
+          window.__mineSignupUid = null;
         }
       } catch (e) {
         console.warn("roster", e);
