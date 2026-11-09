@@ -14,173 +14,138 @@
       --accent: #7ed957;
       --chip: #1e4d7a;
       --danger: #ffb4a8;
+      --line: #2a5070;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh;
       font-family: "Segoe UI", system-ui, sans-serif;
-      background: radial-gradient(1200px 600px at 20% -10%, #1a4a6e, var(--bg));
+      background: radial-gradient(1100px 520px at 15% -15%, #1a4a6e, var(--bg));
       color: var(--text);
-      display: flex; flex-direction: column; align-items: center;
-      padding: 32px 20px 48px;
+      padding: 20px 16px 48px;
     }
-    h1 { font-size: 1.4rem; margin: 0 0 8px; font-weight: 700; }
-    .sub { color: var(--muted); margin: 0 0 28px; text-align: center; max-width: 420px; }
+    .wrap { max-width: 440px; margin: 0 auto; }
+    [hidden] { display: none !important; }
+
+    .nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; gap: 12px;
+    }
+    .nav a, .linkish {
+      color: var(--accent); font-weight: 700; text-decoration: none; font-size: .9rem;
+      background: none; border: none; cursor: pointer; padding: 0;
+    }
+    .linkish.muted { color: var(--muted); font-weight: 500; text-decoration: underline; }
+    .hello { color: var(--muted); font-size: .85rem; text-align: right; }
+
     .card {
-      width: min(420px, 100%);
-      background: var(--card);
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 16px 40px rgba(0,0,0,.35);
+      background: var(--card); border-radius: 18px; overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,.3);
     }
     .card-head {
-      background: #0e2a40;
-      padding: 16px 18px;
-      display: flex; align-items: center; gap: 12px;
+      background: #0e2a40; padding: 14px 16px;
+      display: flex; align-items: center; gap: 10px;
     }
     .chip {
-      display: inline-block; background: var(--chip); color: #fff;
-      font-size: .72rem; font-weight: 700; letter-spacing: .04em;
-      padding: 4px 10px; border-radius: 999px;
+      background: var(--chip); color: #fff; font-size: .7rem; font-weight: 700;
+      letter-spacing: .04em; padding: 3px 9px; border-radius: 999px;
     }
-    .card-body { padding: 18px; }
-    .title { font-size: 1.25rem; font-weight: 700; margin: 0 0 8px; }
-    .meta { color: var(--muted); font-size: .95rem; margin: 4px 0; }
-    label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 4px; }
-    input {
-      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #2a5070;
-      background: #0e2a40; color: var(--text); font-size: 1rem;
+    .body { padding: 16px 18px 20px; }
+    .title { font-size: 1.3rem; font-weight: 700; margin: 0 0 6px; }
+    .meta { color: var(--muted); font-size: .92rem; margin: 3px 0; }
+
+    .roster { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .roster h3 { margin: 0 0 6px; font-size: .9rem; }
+    .roster ol { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .92rem; }
+    .roster li { margin: 2px 0; }
+
+    .action {
+      margin-top: 16px; padding: 16px; border-radius: 14px;
+      background: #0e2a40; border: 1px solid var(--line); text-align: center;
     }
-    input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .action .status {
+      margin: 0 0 6px; font-weight: 700; color: var(--accent); font-size: 1.05rem;
+    }
+    .action .sub { margin: 0 0 12px; color: var(--muted); font-size: .9rem; line-height: 1.4; }
+
     .btn {
-      display: block; width: 100%; margin: 16px 0 8px; text-align: center;
-      background: var(--accent); color: #0b1f2e; font-weight: 700; border: none;
-      text-decoration: none; padding: 14px 18px; border-radius: 999px; cursor: pointer;
-      font-size: 1rem;
+      display: block; width: 100%; margin: 0; text-align: center; border: none;
+      background: var(--accent); color: #0b1f2e; font-weight: 700;
+      padding: 14px 18px; border-radius: 999px; cursor: pointer; font-size: 1rem;
+      text-decoration: none;
     }
     .btn:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-secondary {
-      background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    .btn-google { background: #fff; color: #1f1f1f; }
+    .btn-ghost {
+      background: transparent; color: var(--danger); border: 1px solid var(--danger);
+      margin-top: 10px;
     }
-    .btn-google {
-      background: #fff; color: #1f1f1f; border: none;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
+    .footer {
+      margin-top: 16px; text-align: center;
     }
-    .btn-danger {
-      background: transparent; color: var(--danger);
-      border: 1px solid var(--danger);
-    }
-    .auth-session {
-      background: #0e2a40; border-radius: 12px; padding: 12px 14px;
-      margin: 0 0 14px; border: 1px solid #2a5070;
-    }
-    .auth-session .welcome {
-      margin: 0; font-weight: 700; color: var(--accent); font-size: 1.05rem;
-    }
-    .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 8px 0 0; }
-    .msg { text-align: center; margin-top: 10px; font-size: .95rem; }
+    .footer a { color: var(--muted); font-size: .85rem; }
+
+    .err-page { color: var(--danger); text-align: center; margin-top: 40px; }
+    .msg { margin-top: 10px; font-size: .9rem; }
     .msg.ok { color: var(--accent); }
     .msg.err { color: var(--danger); }
-    .err-page { color: var(--danger); text-align: center; margin-top: 24px; }
-    #signupForm { margin-top: 8px; }
-    #signupForm[hidden], #doneBox[hidden], #rosterBox[hidden],
-    #googleBox[hidden], #oneClickBox[hidden] { display: none !important; }
-    .roster-title { font-weight: 700; margin: 16px 0 6px; font-size: .95rem; }
-    .roster-list { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .95rem; }
-    .roster-list li { margin: 2px 0; }
-    #doneBox, #oneClickBox, #googleBox {
-      margin-top: 14px; padding: 14px; border-radius: 12px;
-      background: #0e2a40; border: 1px solid #2a5070; text-align: center;
-    }
-    #doneBox strong, #oneClickBox strong { color: var(--accent); }
-    .profile-line { color: var(--muted); font-size: .9rem; margin: 6px 0 0; }
+    .loading { text-align: center; color: var(--muted); padding: 40px 12px; }
   </style>
   <script src="./firebase-config.js"></script>
 </head>
 <body>
-  <p class="note" style="margin:0 0 12px;text-align:center">
-    <a href="../eventos/" style="color:var(--accent);font-weight:700;text-decoration:none">← Eventos abiertos</a>
-  </p>
-  <h1>Inscripción FixtureGo</h1>
-  <p class="sub" id="subtitle">Completá tus datos para apuntarte al evento.</p>
-  <div class="card" id="card" hidden>
-    <div class="card-head">
-      <span class="chip" id="typeChip">EVENTO</span>
-      <strong>FixtureGo PADEL</strong>
+  <div class="wrap">
+    <div class="nav">
+      <a href="../eventos/">← Eventos</a>
+      <div id="navUser" hidden>
+        <div class="hello" id="helloLine"></div>
+        <button type="button" class="linkish muted" id="signOutBtn" style="float:right;margin-top:2px">Salir</button>
+      </div>
     </div>
-    <div class="card-body">
-      <p class="meta" id="when">—</p>
-      <h2 class="title" id="title">Evento</h2>
-      <p class="meta" id="modality"></p>
-      <p class="meta" id="zone"></p>
-      <p class="meta" id="venue"></p>
-      <p class="meta" id="level"></p>
-      <p class="meta" id="spots"></p>
-      <p class="meta" id="min"></p>
-      <p class="meta" id="closes"></p>
 
-      <div id="rosterBox" hidden>
-        <p class="roster-title">Inscritos</p>
-        <ol class="roster-list" id="rosterList"></ol>
-        <p class="meta" id="rosterWait" hidden></p>
+    <div id="loading" class="loading">Cargando evento…</div>
+    <p class="err-page" id="err" hidden>No encontramos este evento.</p>
+
+    <div class="card" id="card" hidden>
+      <div class="card-head">
+        <span class="chip" id="typeChip">EVENTO</span>
+        <strong>FixtureGo</strong>
       </div>
+      <div class="body">
+        <p class="meta" id="when">—</p>
+        <h1 class="title" id="title">Evento</h1>
+        <p class="meta" id="modality"></p>
+        <p class="meta" id="zone"></p>
+        <p class="meta" id="venue"></p>
+        <p class="meta" id="spots"></p>
+        <p class="meta" id="min"></p>
 
-      <div id="sessionBox" class="auth-session" hidden>
-        <p class="welcome" id="welcomeLine">¡Hola!</p>
-        <p class="meta" id="sessionEmail" style="margin:0"></p>
-        <button type="button" class="btn btn-secondary" id="signOutBtn" style="margin-top:10px">
-          Cerrar sesión
-        </button>
+        <div class="roster" id="rosterBox" hidden>
+          <h3>Inscritos</h3>
+          <ol id="rosterList"></ol>
+          <p class="meta" id="rosterWait" hidden></p>
+        </div>
+
+        <!-- Una sola zona de acción según estado -->
+        <div class="action" id="action">
+          <p class="status" id="actionTitle">…</p>
+          <p class="sub" id="actionSub"></p>
+          <button type="button" class="btn" id="primaryBtn" hidden></button>
+          <button type="button" class="btn btn-ghost" id="leaveBtn" hidden>Borrarme del evento</button>
+          <p class="msg" id="msg" hidden></p>
+        </div>
+
+        <div class="footer">
+          <a id="openApp" href="#">Abrir en la app</a>
+        </div>
       </div>
-
-      <div id="googleBox" hidden>
-        <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
-        <p class="note">Una vez: elegís la cuenta. Después quedás logueado en este navegador.</p>
-      </div>
-
-      <div id="oneClickBox" hidden>
-        <strong>Listo para inscribirte</strong>
-        <p class="profile-line" id="profileLine"></p>
-        <button type="button" class="btn" id="oneClickBtn">Inscribirme</button>
-        <button type="button" class="btn btn-secondary" id="manualInsteadBtn" style="margin-top:8px">
-          Usar otro nombre / email
-        </button>
-      </div>
-
-      <form id="signupForm" hidden>
-        <label for="nameInput">Nombre</label>
-        <input id="nameInput" name="name" autocomplete="name" required maxlength="79" />
-        <label for="emailInput">Email</label>
-        <input id="emailInput" name="email" type="email" autocomplete="email" required />
-        <button class="btn" type="submit" id="submitBtn">Inscribirme</button>
-        <p class="msg" id="formMsg" hidden></p>
-      </form>
-
-      <div id="doneBox" hidden>
-        <strong id="doneTitle">¡Inscripción confirmada!</strong>
-        <p class="meta" id="doneSub" style="margin-top:8px">Ya figurás en la lista. Abrí la app para seguir el evento.</p>
-        <button type="button" class="btn btn-danger" id="leaveBtn" style="margin-top:12px">
-          Borrarme de este evento
-        </button>
-        <button type="button" class="btn btn-secondary" id="anotherBtn" style="margin-top:8px">
-          Anotar a otra persona
-        </button>
-      </div>
-
-      <p class="note" id="firebaseHint" hidden>
-        La inscripción web se activa cuando el organizador publica con Firebase.
-        Mientras tanto abrí la app.
-      </p>
-      <a class="btn btn-secondary" id="openApp" href="#">Abrir en FixtureGo</a>
-      <p class="note" id="openAppNote">Si no tenés la app, instálala desde Google Play.</p>
     </div>
   </div>
-  <p class="err-page" id="err" hidden>No encontramos este evento.</p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getAuth, signInAnonymously, signOut, onAuthStateChanged,
+      getAuth, signOut, onAuthStateChanged,
       GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
       signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -190,12 +155,14 @@
 
     const params = new URLSearchParams(location.search);
     let eventId = params.get("id");
-    const rawSnap = params.get("d");
     if (!eventId) {
       const parts = location.pathname.split("/").filter(Boolean);
       const i = parts.indexOf("e");
       if (i >= 0 && parts[i + 1] && parts[i + 1] !== "index.html") eventId = parts[i + 1];
     }
+
+    const cfg = window.FIXTUREGO_FIREBASE;
+    const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
 
     const deepHttps = eventId
       ? "https://fixturego.com/e/?id=" + encodeURIComponent(eventId)
@@ -208,17 +175,14 @@
     openApp.addEventListener("click", (e) => {
       e.preventDefault();
       const ua = navigator.userAgent || "";
-      const isAndroid = /Android/i.test(ua);
-      const isIOS = /iPhone|iPad|iPod/i.test(ua);
-      if (isAndroid && eventId) {
-        const intentUrl =
+      if (/Android/i.test(ua) && eventId) {
+        window.location.href =
           "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
           "#Intent;scheme=https;package=com.gopadel.americano;" +
           "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
-        window.location.href = intentUrl;
         return;
       }
-      if (isIOS) {
+      if (/iPhone|iPad|iPod/i.test(ua)) {
         window.location.href = deepHttps;
         setTimeout(() => { window.location.href = playStore; }, 1500);
         return;
@@ -226,483 +190,78 @@
       window.open(deepHttps, "_blank");
     });
 
-    document.getElementById("anotherBtn").addEventListener("click", async () => {
-      if (!auth) return;
-      try {
-        await signOut(auth);
-        await signInAnonymously(auth);
-        mySignupStatus = null;
-        document.getElementById("doneBox").hidden = true;
-        document.getElementById("nameInput").value = "";
-        document.getElementById("emailInput").value = "";
-        document.getElementById("nameInput").disabled = false;
-        document.getElementById("emailInput").disabled = false;
-        document.getElementById("submitBtn").disabled = false;
-        document.getElementById("subtitle").textContent =
-          "Completá los datos de la otra persona.";
-        updateAuthUi();
-        enableForm(true);
-        document.getElementById("formMsg").hidden = true;
-      } catch (err) {
-        console.error(err);
-        showMsg("No se pudo preparar otra inscripción. Probá en una ventana de incógnito.", true);
-        enableForm(true);
-      }
-    });
-
     if (!eventId) {
+      document.getElementById("loading").hidden = true;
       document.getElementById("err").hidden = false;
       throw new Error("missing id");
     }
-    document.getElementById("card").hidden = false;
 
-    const cfg = window.FIXTUREGO_FIREBASE;
-    const firebaseReady = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
-
-    let eventState = null;
-    let mySignupStatus = null;
-    const snap = decodeSnapshot(rawSnap);
-    if (snap) {
-      eventState = snapToState(snap);
-      fillUi(eventState);
-    } else {
-      document.getElementById("title").textContent = "Evento " + eventId.slice(0, 8) + "…";
-      document.getElementById("when").textContent = "Cargando…";
-      document.getElementById("typeChip").textContent = "INSCRIPCIÓN";
-    }
-
-    let db = null;
     let auth = null;
-    const googleProvider = new GoogleAuthProvider();
+    let db = null;
+    let eventState = null;
+    let myStatus = null; // null | confirmed | waitlist
+    let busy = false;
+    const provider = new GoogleAuthProvider();
 
-    function isGoogleUser(u) {
+    const actionTitle = document.getElementById("actionTitle");
+    const actionSub = document.getElementById("actionSub");
+    const primaryBtn = document.getElementById("primaryBtn");
+    const leaveBtn = document.getElementById("leaveBtn");
+    const msgEl = document.getElementById("msg");
+
+    function isGoogle(u) {
       return !!(u && !u.isAnonymous && u.providerData &&
         u.providerData.some((p) => p.providerId === "google.com"));
     }
-
-    function prefersRedirectAuth() {
-      const ua = navigator.userAgent || "";
-      return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(ua);
-    }
-
     function firstName(u) {
-      const full = (u && u.displayName) || "";
-      return full.trim().split(/\s+/)[0] || "jugador";
+      const n = ((u && u.displayName) || "").trim().split(/\s+/)[0];
+      return n || "jugador";
     }
-
-    function updateAuthUi() {
-      const u = auth && auth.currentUser;
-      const google = isGoogleUser(u);
-      const sessionBox = document.getElementById("sessionBox");
-      const googleBox = document.getElementById("googleBox");
-      const oneClick = document.getElementById("oneClickBox");
-
-      if (google) {
-        sessionBox.hidden = false;
-        document.getElementById("welcomeLine").textContent =
-          "¡Hola, " + firstName(u) + "!";
-        document.getElementById("sessionEmail").textContent = u.email || "";
-        googleBox.hidden = true;
-      } else {
-        sessionBox.hidden = true;
-      }
-
-      if (mySignupStatus) {
-        googleBox.hidden = true;
-        oneClick.hidden = true;
-        return;
-      }
-      if (!firebaseReady || !eventState || eventState.status !== "open") {
-        googleBox.hidden = true;
-        oneClick.hidden = true;
-        return;
-      }
-      if (google) {
-        oneClick.hidden = false;
-        const name = u.displayName || "";
-        const email = u.email || "";
-        document.getElementById("profileLine").textContent =
-          "Te inscribís como " + (name || email);
-        document.getElementById("nameInput").value = name;
-        document.getElementById("emailInput").value = email;
-        document.getElementById("signupForm").hidden = true;
-        document.getElementById("subtitle").textContent =
-          "Bienvenido. Un clic para apuntarte.";
-      } else {
-        googleBox.hidden = false;
-        oneClick.hidden = true;
-      }
+    function mobile() {
+      return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(
+        navigator.userAgent || "",
+      );
     }
-
-    async function finishRedirectIfAny() {
-      try {
-        await getRedirectResult(auth);
-      } catch (e) {
-        const code = e && e.code;
-        if (code === "auth/credential-already-in-use" ||
-            code === "auth/email-already-in-use" ||
-            code === "auth/account-exists-with-different-credential") {
-          const cred = GoogleAuthProvider.credentialFromError(e);
-          if (cred) {
-            await signInWithCredential(auth, cred);
-            return;
-          }
-        }
-        console.warn("redirect", e);
-      }
-    }
-
-    async function continueWithGoogle() {
-      if (!auth) return;
-      const btn = document.getElementById("googleBtn");
-      btn.disabled = true;
-      try {
-        await ensureAuth();
-        if (isGoogleUser(auth.currentUser)) {
-          updateAuthUi();
-          await refreshRosterAndMine();
-          return;
-        }
-        // signIn (no link): evita el loop si esa cuenta Google ya existía
-        if (prefersRedirectAuth()) {
-          showMsg("Redirigiendo a Google…", false);
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        }
-        try {
-          await signInWithPopup(auth, googleProvider);
-        } catch (e) {
-          const code = e && e.code;
-          if (code === "auth/popup-blocked" ||
-              code === "auth/operation-not-supported-in-this-environment" ||
-              code === "auth/cancelled-popup-request") {
-            showMsg("Redirigiendo a Google…", false);
-            await signInWithRedirect(auth, googleProvider);
-            return;
-          }
-          throw e;
-        }
-        updateAuthUi();
-        await refreshRosterAndMine();
-      } catch (e) {
-        console.error(e);
-        const code = e && e.code;
-        if (code === "auth/popup-closed-by-user") {
-          showMsg("Cerraste la ventana de Google. Tocá de nuevo cuando quieras.", true);
-        } else {
-          showMsg(e.message || "No se pudo iniciar con Google.", true);
-        }
-        enableForm(true);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    document.getElementById("googleBtn").addEventListener("click", continueWithGoogle);
-    document.getElementById("manualInsteadBtn").addEventListener("click", () => {
-      document.getElementById("oneClickBox").hidden = true;
-      enableForm(true);
-    });
-    document.getElementById("signOutBtn").addEventListener("click", async () => {
-      if (!auth) return;
-      try {
-        await signOut(auth);
-        await signInAnonymously(auth);
-        mySignupStatus = null;
-        document.getElementById("doneBox").hidden = true;
-        document.getElementById("subtitle").textContent =
-          "Completá tus datos para apuntarte al evento.";
-        updateAuthUi();
-        enableForm(true);
-        showMsg("Sesión cerrada en este navegador.", false);
-      } catch (err) {
-        console.error(err);
-        showMsg("No se pudo cerrar sesión.", true);
-      }
-    });
-    document.getElementById("leaveBtn").addEventListener("click", leaveEvent);
-    document.getElementById("oneClickBtn").addEventListener("click", async () => {
-      const u = auth && auth.currentUser;
-      if (!isGoogleUser(u)) return;
-      document.getElementById("nameInput").value = u.displayName || "";
-      document.getElementById("emailInput").value = u.email || "";
-      document.getElementById("signupForm").requestSubmit();
-    });
-
-    if (firebaseReady) {
-      const app = initializeApp(cfg);
-      auth = getAuth(app);
-      db = getFirestore(app);
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-      } catch (_) {}
-      await finishRedirectIfAny();
-      try {
-        const remote = await loadEvent(eventId);
-        if (remote) {
-          eventState = remote;
-          fillUi(eventState);
-          await ensureAuth();
-          await refreshRosterAndMine();
-          if (!mySignupStatus) {
-            updateAuthUi();
-            if (!isGoogleUser(auth.currentUser)) enableForm(true);
-          }
-        } else if (snap) {
-          document.getElementById("firebaseHint").hidden = false;
-          document.getElementById("firebaseHint").textContent =
-            "Este link tiene ficha local, pero el evento aún no está en la nube. Pedile al organizador que publique con Firebase, o abrí la app.";
-          enableForm(false);
-        } else {
-          document.getElementById("err").hidden = false;
-          document.getElementById("card").hidden = true;
-        }
-      } catch (e) {
-        console.warn(e);
-        if (snap) {
-          document.getElementById("firebaseHint").hidden = false;
-          enableForm(false);
-        }
-      }
-      onAuthStateChanged(auth, async () => {
-        updateAuthUi();
-        if (isGoogleUser(auth.currentUser)) {
-          await refreshRosterAndMine();
-        }
-      });
-    } else {
-      document.getElementById("subtitle").textContent =
-        "Ficha del evento. La inscripción online se activa con Firebase.";
-      document.getElementById("firebaseHint").hidden = false;
-      enableForm(false);
-      if (!snap) {
-        document.getElementById("spots").textContent = "ID: " + eventId;
-        document.getElementById("when").textContent = "Abrí la app para ver fecha y plazas";
-      }
-    }
-
-    document.getElementById("signupForm").addEventListener("submit", async (ev) => {
-      ev.preventDefault();
-      if (mySignupStatus) {
-        showDone(mySignupStatus);
-        return;
-      }
-      const name = document.getElementById("nameInput").value.trim();
-      const email = document.getElementById("emailInput").value.trim().toLowerCase();
-      const btn = document.getElementById("submitBtn");
-      const oneBtn = document.getElementById("oneClickBtn");
-      document.getElementById("formMsg").hidden = true;
-      if (!name || !email || !email.includes("@")) {
-        showMsg("Completá nombre y un email válido.", true);
-        return;
-      }
-      if (!db || !auth || !eventState) {
-        showMsg("Inscripción web no disponible.", true);
-        return;
-      }
-      btn.disabled = true;
-      oneBtn.disabled = true;
-      try {
-        await ensureAuth();
-        const fresh = await loadEvent(eventId);
-        if (!fresh || fresh.status !== "open") {
-          throw new Error("Inscripción cerrada");
-        }
-        if (fresh.closesAt && Date.now() >= fresh.closesAt) {
-          throw new Error("Inscripción cerrada");
-        }
-        const signups = await loadSignups(eventId);
-        let already = signups.find((data) =>
-          (data.email && data.email.toLowerCase() === email) ||
-          (data.displayName && data.displayName.toLowerCase() === name.toLowerCase()) ||
-          (auth.currentUser && data.uid === auth.currentUser.uid)
-        );
-        const uid = auth.currentUser.uid;
-        const mineByUid = signups.find((data) => data.uid === uid);
-        if (mineByUid && !already) {
-          showMsg(
-            "Este navegador ya tiene una inscripción. Usá “Anotar a otra persona”.",
-            true,
-          );
-          mySignupStatus = mineByUid.status === "waitlist" ? "waitlist" : "confirmed";
-          showDone(mySignupStatus);
-          btn.disabled = false;
-          oneBtn.disabled = false;
-          return;
-        }
-        if (already) {
-          mySignupStatus = already.status === "waitlist" ? "waitlist" : "confirmed";
-          eventState = fresh;
-          fillUi(eventState);
-          renderRoster(signups);
-          showDone(mySignupStatus);
-          return;
-        }
-        const status = fresh.joined < fresh.capacity ? "confirmed" : "waitlist";
-        await setDoc(doc(db, "open_events", eventId, "signups", uid), {
-          uid,
-          displayName: name,
-          email,
-          status,
-          joinedAtEpochMs: Date.now(),
-        });
-        const joinedCount = fresh.joined + (status === "confirmed" ? 1 : 0);
-        const waitlistCount = fresh.waitlist + (status === "waitlist" ? 1 : 0);
-        await updateDoc(doc(db, "open_events", eventId), {
-          joinedCount,
-          waitlistCount,
-        });
-        mySignupStatus = status;
-        eventState = { ...fresh, joined: joinedCount, waitlist: waitlistCount };
-        fillUi(eventState);
-        await refreshRosterAndMine();
-        showDone(status);
-      } catch (e) {
-        console.error(e);
-        const raw = (e && (e.message || e.code)) || "";
-        const friendly = /permission|insufficient/i.test(String(raw))
-          ? "Este navegador ya tiene una plaza. Tocá “Anotar a otra persona” o usá incógnito."
-          : (e.message || "No se pudo completar la inscripción.");
-        showMsg(friendly, true);
-        btn.disabled = false;
-        oneBtn.disabled = false;
-      }
-    });
-
-    function enableForm(on) {
-      document.getElementById("signupForm").hidden = !on;
-      if (on) {
-        document.getElementById("doneBox").hidden = true;
-        if (isGoogleUser(auth && auth.currentUser)) {
-          document.getElementById("oneClickBox").hidden = true;
-        }
-      }
-    }
-
-    function showDone(status) {
-      enableForm(false);
-      document.getElementById("googleBox").hidden = true;
-      document.getElementById("oneClickBox").hidden = true;
-      const box = document.getElementById("doneBox");
-      box.hidden = false;
-      document.getElementById("doneTitle").textContent =
-        status === "waitlist" ? "Quedaste en lista de espera" : "¡Inscripción confirmada!";
-      document.getElementById("doneSub").textContent =
-        status === "waitlist"
-          ? "Si se libera una plaza, el organizador puede subirte. Abrí la app para seguir el evento."
-          : "Ya figurás en la lista. Abrí la app para seguir el evento.";
-      document.getElementById("subtitle").textContent = "Ya estás apuntado a este evento.";
-      document.getElementById("formMsg").hidden = true;
-      const canLeave = !!(auth && auth.currentUser);
-      document.getElementById("leaveBtn").hidden = !canLeave;
-      updateAuthUi();
-    }
-
-    async function leaveEvent() {
-      const u = auth && auth.currentUser;
-      if (!u || !db || !eventId) return;
-      const btn = document.getElementById("leaveBtn");
-      if (!confirm("¿Seguro que querés borrarte de este evento?")) return;
-      btn.disabled = true;
-      try {
-        const signupUid = window.__mineSignupUid || u.uid;
-        const signupRef = doc(db, "open_events", eventId, "signups", signupUid);
-        const mineSnap = await getDoc(signupRef);
-        if (!mineSnap.exists()) {
-          throw new Error("No encontramos tu inscripción con esta cuenta.");
-        }
-        // Solo podés borrar tu propio doc (reglas). Si el uid del doc ≠ Auth actual, no se puede.
-        if (signupUid !== u.uid) {
-          throw new Error(
-            "Esta plaza se anotó antes de Google. Pedile al organizador que te saque, o anotá de nuevo con esta cuenta."
-          );
-        }
-        await deleteDoc(signupRef);
-        const remaining = await loadSignups(eventId);
-        const joinedCount = remaining.filter((s) => s.status !== "waitlist").length;
-        const waitlistCount = remaining.filter((s) => s.status === "waitlist").length;
-        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
-        mySignupStatus = null;
-        document.getElementById("doneBox").hidden = true;
-        const fresh = await loadEvent(eventId);
-        if (fresh) {
-          eventState = fresh;
-          fillUi(eventState);
-        }
-        renderRoster(remaining);
-        updateAuthUi();
-        if (isGoogleUser(u)) {
-          document.getElementById("subtitle").textContent =
-            "Te borraste. Podés volver a inscribirte cuando quieras.";
-        } else {
-          enableForm(true);
-        }
-        showMsg("Te borraste del evento.", false);
-      } catch (e) {
-        console.error(e);
-        showMsg(e.message || "No se pudo borrar la inscripción.", true);
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
     function showMsg(text, isErr) {
-      const msg = document.getElementById("formMsg");
-      msg.hidden = false;
-      msg.textContent = text;
-      msg.className = "msg " + (isErr ? "err" : "ok");
-      document.getElementById("signupForm").hidden = false;
+      msgEl.hidden = !text;
+      msgEl.textContent = text || "";
+      msgEl.className = "msg " + (isErr ? "err" : "ok");
     }
 
-    async function ensureAuth() {
-      if (auth.currentUser) return auth.currentUser;
-      await signInAnonymously(auth);
-      return new Promise((resolve, reject) => {
-        const unsub = onAuthStateChanged(auth, (u) => {
-          if (u) {
-            unsub();
-            resolve(u);
-          }
-        });
-        setTimeout(() => reject(new Error("Auth timeout")), 15000);
-      });
-    }
-
-    async function loadSignups(id) {
-      const snap = await getDocs(collection(db, "open_events", id, "signups"));
-      const list = [];
-      snap.forEach((d) => list.push(d.data()));
-      return list;
-    }
-
-    async function refreshRosterAndMine() {
-      if (!db) return;
-      try {
-        if (auth && !auth.currentUser) {
-          try { await ensureAuth(); } catch (_) {}
-        }
-        const signups = await loadSignups(eventId);
-        renderRoster(signups);
-        const u = auth && auth.currentUser;
-        const uid = u ? u.uid : null;
-        const email = u && u.email ? u.email.toLowerCase() : "";
-        const mine = uid
-          ? signups.find((s) =>
-              s.uid === uid ||
-              (email && s.email && s.email.toLowerCase() === email)
-            )
-          : null;
-        if (mine) {
-          mySignupStatus = mine.status === "waitlist" ? "waitlist" : "confirmed";
-          // Guardar uid real del doc por si hay que borrar (inscripción previa anónima)
-          window.__mineSignupUid = mine.uid;
-          showDone(mySignupStatus);
-        } else {
-          window.__mineSignupUid = null;
-        }
-      } catch (e) {
-        console.warn("roster", e);
-      }
+    function fillEvent(s) {
+      document.getElementById("typeChip").textContent =
+        s.type === "torneo" ? "TORNEO" : "AMERICANA";
+      document.getElementById("title").textContent = s.title || "Evento";
+      document.getElementById("when").textContent = s.startsAt
+        ? new Date(s.startsAt).toLocaleString("es", {
+            weekday: "long", day: "numeric", month: "long",
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "—";
+      const map = {
+        all_vs_all: "Todos vs todos",
+        pairs: "Por parejas",
+        mixed_fixed: "Mixta fija",
+        mixed_rotating: "Mixta rotativa",
+        custom: "Personalizada",
+        ladder: "Escalera",
+      };
+      const mod = document.getElementById("modality");
+      if (s.type === "americana" && s.modality) {
+        mod.hidden = false;
+        mod.textContent = map[s.modality] || s.modality;
+      } else mod.hidden = true;
+      const zone = document.getElementById("zone");
+      if (s.zone) { zone.hidden = false; zone.textContent = "Zona: " + s.zone; }
+      else zone.hidden = true;
+      const venue = document.getElementById("venue");
+      if (s.venue) { venue.hidden = false; venue.textContent = s.venue; }
+      else venue.hidden = true;
+      let spots = s.joined + " de " + s.capacity + " plazas";
+      if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
+      document.getElementById("spots").textContent = spots;
+      document.getElementById("min").textContent =
+        s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
     }
 
     function renderRoster(signups) {
@@ -714,7 +273,7 @@
       const ol = document.getElementById("rosterList");
       const waitEl = document.getElementById("rosterWait");
       ol.innerHTML = "";
-      if (confirmed.length === 0 && wait === 0) {
+      if (!confirmed.length && !wait) {
         box.hidden = true;
         return;
       }
@@ -727,15 +286,116 @@
       if (wait > 0) {
         waitEl.hidden = false;
         waitEl.textContent = "+" + wait + " en reserva";
+      } else waitEl.hidden = true;
+    }
+
+    function renderAction() {
+      const u = auth && auth.currentUser;
+      const google = isGoogle(u);
+      const open = eventState && eventState.status === "open";
+      showMsg("", false);
+      leaveBtn.hidden = true;
+      primaryBtn.hidden = true;
+      primaryBtn.onclick = null;
+      primaryBtn.className = "btn";
+
+      const nav = document.getElementById("navUser");
+      if (google) {
+        nav.hidden = false;
+        document.getElementById("helloLine").textContent =
+          "¡Hola, " + firstName(u) + "!";
       } else {
-        waitEl.hidden = true;
+        nav.hidden = true;
+      }
+
+      if (!open) {
+        actionTitle.textContent = "Inscripción cerrada";
+        actionSub.textContent = "Este evento ya no acepta más jugadores desde la web.";
+        return;
+      }
+
+      if (!google) {
+        actionTitle.textContent = "Entrá para inscribirte";
+        actionSub.textContent = "Con Google quedás logueado y te apuntás en un clic.";
+        primaryBtn.hidden = false;
+        primaryBtn.className = "btn btn-google";
+        primaryBtn.textContent = "Continuar con Google";
+        primaryBtn.onclick = () => loginGoogle();
+        return;
+      }
+
+      if (myStatus) {
+        actionTitle.textContent =
+          myStatus === "waitlist" ? "Estás en lista de espera" : "Ya estás inscrito";
+        actionSub.textContent =
+          myStatus === "waitlist"
+            ? "Si se libera una plaza, el organizador puede subirte."
+            : "Te esperamos. Podés volver a Eventos o salir de la lista.";
+        leaveBtn.hidden = false;
+        return;
+      }
+
+      actionTitle.textContent = "¿Te sumás?";
+      actionSub.textContent =
+        "Te inscribís como " + (u.displayName || u.email || "jugador") + ".";
+      primaryBtn.hidden = false;
+      primaryBtn.className = "btn";
+      primaryBtn.textContent = "Inscribirme";
+      primaryBtn.onclick = () => joinEvent();
+    }
+
+    async function finishRedirect() {
+      try {
+        await getRedirectResult(auth);
+      } catch (e) {
+        const code = e && e.code;
+        if (code === "auth/credential-already-in-use" ||
+            code === "auth/email-already-in-use" ||
+            code === "auth/account-exists-with-different-credential") {
+          const cred = GoogleAuthProvider.credentialFromError(e);
+          if (cred) await signInWithCredential(auth, cred);
+        } else console.warn(e);
+      }
+    }
+
+    async function loginGoogle() {
+      if (busy) return;
+      busy = true;
+      primaryBtn.disabled = true;
+      actionSub.textContent = "Abriendo Google…";
+      try {
+        if (mobile()) {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (e) {
+          if (e && (e.code === "auth/popup-blocked" ||
+              e.code === "auth/operation-not-supported-in-this-environment" ||
+              e.code === "auth/cancelled-popup-request")) {
+            await signInWithRedirect(auth, provider);
+            return;
+          }
+          throw e;
+        }
+      } catch (e) {
+        if (e && e.code === "auth/popup-closed-by-user") {
+          showMsg("Cerraste la ventana. Probá de nuevo.", true);
+        } else {
+          showMsg(e.message || "No se pudo iniciar sesión.", true);
+        }
+        renderAction();
+      } finally {
+        busy = false;
+        primaryBtn.disabled = false;
       }
     }
 
     async function loadEvent(id) {
-      const snapDoc = await getDoc(doc(db, "open_events", id));
-      if (!snapDoc.exists()) return null;
-      const d = snapDoc.data();
+      const snap = await getDoc(doc(db, "open_events", id));
+      if (!snap.exists()) return null;
+      const d = snap.data();
       return {
         id,
         type: d.type || "americana",
@@ -748,95 +408,160 @@
         waitlist: d.waitlistCount || 0,
         zone: d.zone || "",
         venue: d.venueText || "",
-        levelMin: d.levelMin != null ? String(d.levelMin) : "",
-        levelMax: d.levelMax != null ? String(d.levelMax) : "",
-        closesAt: d.registrationClosesAtEpochMs || null,
         status: d.status || "open",
       };
     }
 
-    function snapToState(s) {
-      return { ...s, status: "open" };
+    async function loadSignups() {
+      const snap = await getDocs(collection(db, "open_events", eventId, "signups"));
+      const list = [];
+      snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+      return list;
     }
 
-    function decodeSnapshot(encoded) {
-      if (!encoded) return null;
+    async function refreshMineAndRoster() {
+      const signups = await loadSignups();
+      renderRoster(signups);
+      const u = auth && auth.currentUser;
+      myStatus = null;
+      if (isGoogle(u)) {
+        const email = (u.email || "").toLowerCase();
+        const mine = signups.find((s) =>
+          s.uid === u.uid ||
+          (email && s.email && s.email.toLowerCase() === email)
+        );
+        if (mine) {
+          myStatus = mine.status === "waitlist" ? "waitlist" : "confirmed";
+          window.__mineUid = mine.uid;
+        }
+      }
+      renderAction();
+    }
+
+    async function joinEvent() {
+      const u = auth && auth.currentUser;
+      if (!isGoogle(u) || busy) return;
+      busy = true;
+      primaryBtn.disabled = true;
       try {
-        let b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
-        while (b64.length % 4) b64 += "=";
-        const text = decodeURIComponent(escape(atob(b64)));
-        const p = text.split("|");
-        if (p.length < 8) return null;
-        return {
-          id: p[0],
-          type: p[1],
-          modality: p[2],
-          title: p[3],
-          startsAt: Number(p[4]) || 0,
-          capacity: Number(p[5]) || 0,
-          minConfirmed: Number(p[6]) || 0,
-          joined: Number(p[7]) || 0,
-          waitlist: Number(p[8]) || 0,
-          zone: p[9] || "",
-          venue: p[10] || "",
-          levelMin: p[11] || "",
-          levelMax: p[12] || "",
-          closesAt: p[13] ? Number(p[13]) : null,
-        };
+        const fresh = await loadEvent(eventId);
+        if (!fresh || fresh.status !== "open") throw new Error("Inscripción cerrada");
+        const signups = await loadSignups();
+        const email = (u.email || "").toLowerCase();
+        const name = (u.displayName || "").trim() || email.split("@")[0] || "Jugador";
+        const already = signups.find((s) =>
+          s.uid === u.uid ||
+          (email && s.email && s.email.toLowerCase() === email)
+        );
+        if (already) {
+          myStatus = already.status === "waitlist" ? "waitlist" : "confirmed";
+          window.__mineUid = already.uid;
+          eventState = fresh;
+          fillEvent(eventState);
+          renderRoster(signups);
+          renderAction();
+          return;
+        }
+        const status = fresh.joined < fresh.capacity ? "confirmed" : "waitlist";
+        await setDoc(doc(db, "open_events", eventId, "signups", u.uid), {
+          uid: u.uid,
+          displayName: name.slice(0, 79),
+          email,
+          status,
+          joinedAtEpochMs: Date.now(),
+        });
+        const joinedCount = fresh.joined + (status === "confirmed" ? 1 : 0);
+        const waitlistCount = fresh.waitlist + (status === "waitlist" ? 1 : 0);
+        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
+        eventState = { ...fresh, joined: joinedCount, waitlist: waitlistCount };
+        fillEvent(eventState);
+        myStatus = status;
+        window.__mineUid = u.uid;
+        await refreshMineAndRoster();
+        showMsg(status === "waitlist" ? "Quedaste en reserva." : "¡Listo, estás inscrito!", false);
       } catch (e) {
-        return null;
+        console.error(e);
+        showMsg(e.message || "No se pudo inscribir.", true);
+      } finally {
+        busy = false;
+        primaryBtn.disabled = false;
       }
     }
 
-    function fillUi(s) {
-      const typeLabel = s.type === "torneo" ? "TORNEO" : "AMERICANA";
-      document.getElementById("typeChip").textContent = typeLabel;
-      document.getElementById("title").textContent = s.title || "Evento";
-      document.getElementById("when").textContent = s.startsAt
-        ? new Date(s.startsAt).toLocaleString("es", {
-            weekday: "long", day: "numeric", month: "long",
-            hour: "2-digit", minute: "2-digit",
-          })
-        : "—";
-      const modalityMap = {
-        all_vs_all: "Todos vs todos",
-        pairs: "Por parejas",
-        mixed_fixed: "Mixta fija",
-        mixed_rotating: "Mixta rotativa",
-        custom: "Personalizada",
-        ladder: "Escalera",
-      };
-      const modEl = document.getElementById("modality");
-      if (s.type === "americana" && s.modality) {
-        modEl.hidden = false;
-        modEl.textContent = modalityMap[s.modality] || s.modality;
-      } else {
-        modEl.hidden = true;
+    async function leaveEvent() {
+      const u = auth && auth.currentUser;
+      if (!u || busy) return;
+      if (!confirm("¿Borrarte de este evento?")) return;
+      busy = true;
+      leaveBtn.disabled = true;
+      try {
+        const signupUid = window.__mineUid || u.uid;
+        if (signupUid !== u.uid) {
+          throw new Error(
+            "Esta plaza se anotó con otra sesión. Pedile al organizador que te saque."
+          );
+        }
+        await deleteDoc(doc(db, "open_events", eventId, "signups", signupUid));
+        const remaining = await loadSignups();
+        const joinedCount = remaining.filter((s) => s.status !== "waitlist").length;
+        const waitlistCount = remaining.filter((s) => s.status === "waitlist").length;
+        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
+        myStatus = null;
+        window.__mineUid = null;
+        const fresh = await loadEvent(eventId);
+        if (fresh) {
+          eventState = fresh;
+          fillEvent(eventState);
+        }
+        renderRoster(remaining);
+        renderAction();
+        showMsg("Te borraste del evento.", false);
+      } catch (e) {
+        console.error(e);
+        showMsg(e.message || "No se pudo borrar.", true);
+      } finally {
+        busy = false;
+        leaveBtn.disabled = false;
       }
-      const zoneEl = document.getElementById("zone");
-      if (s.zone) { zoneEl.hidden = false; zoneEl.textContent = "Zona: " + s.zone; }
-      else zoneEl.hidden = true;
-      const venueEl = document.getElementById("venue");
-      if (s.venue) { venueEl.hidden = false; venueEl.textContent = s.venue; }
-      else venueEl.hidden = true;
-      const levelEl = document.getElementById("level");
-      if (s.levelMin && s.levelMax) {
-        levelEl.hidden = false;
-        levelEl.textContent = "Nivel: " + s.levelMin + "–" + s.levelMax;
-      } else levelEl.hidden = true;
-      let spots = s.joined + " de " + s.capacity + " plazas";
-      if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
-      document.getElementById("spots").textContent = spots;
-      document.getElementById("min").textContent =
-        s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
-      const closesEl = document.getElementById("closes");
-      if (s.closesAt) {
-        closesEl.hidden = false;
-        closesEl.textContent = "Cierra inscripción: " +
-          new Date(s.closesAt).toLocaleString("es", {
-            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-          });
-      } else closesEl.hidden = true;
+    }
+
+    document.getElementById("signOutBtn").addEventListener("click", async () => {
+      await signOut(auth);
+      myStatus = null;
+      renderAction();
+    });
+    leaveBtn.addEventListener("click", leaveEvent);
+
+    if (!ready) {
+      document.getElementById("loading").textContent = "Falta configurar Firebase.";
+    } else {
+      const app = initializeApp(cfg);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      try { await setPersistence(auth, browserLocalPersistence); } catch (_) {}
+      await finishRedirect();
+
+      try {
+        eventState = await loadEvent(eventId);
+        document.getElementById("loading").hidden = true;
+        if (!eventState) {
+          document.getElementById("err").hidden = false;
+        } else {
+          document.getElementById("card").hidden = false;
+          fillEvent(eventState);
+          await refreshMineAndRoster();
+        }
+      } catch (e) {
+        console.error(e);
+        document.getElementById("loading").hidden = true;
+        document.getElementById("err").hidden = false;
+        document.getElementById("err").textContent = e.message || "Error al cargar.";
+      }
+
+      onAuthStateChanged(auth, async () => {
+        if (eventState) await refreshMineAndRoster();
+        else renderAction();
+      });
     }
   </script>
 </body>
