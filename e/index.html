@@ -123,6 +123,9 @@
         <button type="button" class="btn btn-secondary" id="manualInsteadBtn" style="margin-top:8px">
           Usar otro nombre / email
         </button>
+        <button type="button" class="btn btn-secondary" id="signOutBtn" style="margin-top:8px">
+          Cerrar sesión
+        </button>
       </div>
 
       <form id="signupForm" hidden>
@@ -157,7 +160,7 @@
     import {
       getAuth, signInAnonymously, signOut, onAuthStateChanged,
       GoogleAuthProvider, linkWithPopup, signInWithPopup, linkWithRedirect,
-      getRedirectResult,
+      signInWithRedirect, getRedirectResult,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc,
@@ -256,6 +259,11 @@
         u.providerData.some((p) => p.providerId === "google.com"));
     }
 
+    function prefersRedirectAuth() {
+      const ua = navigator.userAgent || "";
+      return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(ua);
+    }
+
     function updateAuthUi() {
       const u = auth && auth.currentUser;
       const google = isGoogleUser(u);
@@ -277,15 +285,25 @@
         const name = u.displayName || "";
         const email = u.email || "";
         document.getElementById("profileLine").textContent =
-          (name ? name + " · " : "") + email;
+          "Sesión: " + (name ? name + " · " : "") + email;
         document.getElementById("nameInput").value = name;
         document.getElementById("emailInput").value = email;
         document.getElementById("signupForm").hidden = true;
         document.getElementById("subtitle").textContent =
-          "Estás logueado. Un clic para apuntarte.";
+          "Estás logueado en este navegador. Un clic para apuntarte.";
       } else {
         googleBox.hidden = false;
         oneClick.hidden = true;
+      }
+    }
+
+    async function startGoogleRedirect() {
+      const current = auth.currentUser;
+      showMsg("Redirigiendo a Google…", false);
+      if (current && current.isAnonymous) {
+        await linkWithRedirect(current, googleProvider);
+      } else {
+        await signInWithRedirect(auth, googleProvider);
       }
     }
 
@@ -296,6 +314,11 @@
       try {
         await ensureAuth();
         const current = auth.currentUser;
+        // Móvil / in-app browsers: redirect (el popup suele bloquearse)
+        if (prefersRedirectAuth()) {
+          await startGoogleRedirect();
+          return;
+        }
         try {
           if (current && current.isAnonymous) {
             await linkWithPopup(current, googleProvider);
@@ -307,13 +330,20 @@
           if (code === "auth/credential-already-in-use" ||
               code === "auth/email-already-in-use" ||
               code === "auth/account-exists-with-different-credential") {
-            await signInWithPopup(auth, googleProvider);
-          } else if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
-            if (current && current.isAnonymous) {
-              await linkWithRedirect(current, googleProvider);
-            } else {
+            try {
               await signInWithPopup(auth, googleProvider);
+            } catch (e2) {
+              if (e2 && (e2.code === "auth/popup-blocked" ||
+                  e2.code === "auth/operation-not-supported-in-this-environment")) {
+                await startGoogleRedirect();
+                return;
+              }
+              throw e2;
             }
+          } else if (code === "auth/popup-blocked" ||
+              code === "auth/operation-not-supported-in-this-environment" ||
+              code === "auth/cancelled-popup-request") {
+            await startGoogleRedirect();
             return;
           } else {
             throw e;
@@ -323,7 +353,11 @@
         await refreshRosterAndMine();
       } catch (e) {
         console.error(e);
-        showMsg(e.message || "No se pudo iniciar con Google.", true);
+        const code = e && e.code;
+        const friendly = code === "auth/popup-blocked"
+          ? "El navegador bloqueó la ventana de Google. Probá de nuevo (usaremos redirección)."
+          : (e.message || "No se pudo iniciar con Google.");
+        showMsg(friendly, true);
         enableForm(true);
       } finally {
         btn.disabled = false;
@@ -334,6 +368,23 @@
     document.getElementById("manualInsteadBtn").addEventListener("click", () => {
       document.getElementById("oneClickBox").hidden = true;
       enableForm(true);
+    });
+    document.getElementById("signOutBtn").addEventListener("click", async () => {
+      if (!auth) return;
+      try {
+        await signOut(auth);
+        await signInAnonymously(auth);
+        mySignupStatus = null;
+        document.getElementById("doneBox").hidden = true;
+        document.getElementById("subtitle").textContent =
+          "Completá tus datos para apuntarte al evento.";
+        updateAuthUi();
+        enableForm(true);
+        showMsg("Sesión cerrada en este navegador.", false);
+      } catch (err) {
+        console.error(err);
+        showMsg("No se pudo cerrar sesión.", true);
+      }
     });
     document.getElementById("oneClickBtn").addEventListener("click", async () => {
       const u = auth && auth.currentUser;
