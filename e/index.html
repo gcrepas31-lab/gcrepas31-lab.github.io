@@ -93,10 +93,20 @@
       margin-top: 16px; padding: 16px; border-radius: 14px;
       background: #0e2a40; border: 1px solid var(--line); text-align: center;
     }
+    [data-theme="light"] .action { background: #f3f7fb; }
     .action .status {
       margin: 0 0 6px; font-weight: 700; color: var(--accent); font-size: 1.05rem;
     }
     .action .sub { margin: 0 0 12px; color: var(--muted); font-size: .9rem; line-height: 1.4; }
+    .nick-wrap { text-align: left; margin: 0 0 12px; }
+    .nick-wrap label {
+      display: block; font-size: .82rem; color: var(--muted); margin: 0 0 4px;
+    }
+    .nick-wrap input {
+      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
+      background: var(--bg); color: var(--text); font-size: 1rem;
+    }
+    .nick-hint { margin: 6px 0 0; font-size: .78rem; color: var(--muted); line-height: 1.35; }
 
     .btn {
       display: block; width: 100%; margin: 0; text-align: center; border: none;
@@ -169,7 +179,19 @@
         <div class="action" id="action">
           <p class="status" id="actionTitle">…</p>
           <p class="sub" id="actionSub"></p>
+          <div class="nick-wrap" id="nickWrap" hidden>
+            <label for="nickInput">Nombre en la lista (nick)</label>
+            <input id="nickInput" maxlength="79" autocomplete="nickname"
+                   placeholder="Ej: Gonza, Gcrepas…" />
+            <p class="nick-hint">
+              La cuenta se identifica por tu email. El nick es solo cómo aparecés en este evento.
+            </p>
+          </div>
           <button type="button" class="btn" id="primaryBtn" hidden></button>
+          <button type="button" class="btn btn-secondary" id="saveNickBtn" hidden
+                  style="margin-top:10px;background:transparent;color:var(--accent);border:1px solid var(--accent)">
+            Guardar nombre en la lista
+          </button>
           <button type="button" class="btn btn-ghost" id="leaveBtn" hidden>Borrarme del evento</button>
           <p class="msg" id="msg" hidden></p>
         </div>
@@ -179,7 +201,6 @@
             Compartir por WhatsApp
           </button>
           <a id="openApp" href="#">Abrir en la app</a>
-          <a href="../eventos/#datos" style="color:var(--muted);font-size:.85rem">Editar mi nombre</a>
         </div>
       </div>
     </div>
@@ -196,7 +217,7 @@
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc, deleteDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
-      niceName, greetName, initial, applySavedTheme,
+      niceName, greetName, initial, applySavedTheme, setStoredName, getStoredName,
     } from "../js/profile.js";
 
     applySavedTheme();
@@ -255,7 +276,22 @@
     const actionSub = document.getElementById("actionSub");
     const primaryBtn = document.getElementById("primaryBtn");
     const leaveBtn = document.getElementById("leaveBtn");
+    const saveNickBtn = document.getElementById("saveNickBtn");
+    const nickWrap = document.getElementById("nickWrap");
+    const nickInput = document.getElementById("nickInput");
     const msgEl = document.getElementById("msg");
+
+    function readNick() {
+      return (nickInput.value || "").trim().slice(0, 79);
+    }
+
+    function fillNickDefault(u, currentListName) {
+      if (currentListName) {
+        nickInput.value = currentListName;
+        return;
+      }
+      nickInput.value = getStoredName() || niceName(u);
+    }
 
     function isGoogle(u) {
       return !!(u && !u.isAnonymous && u.providerData &&
@@ -362,6 +398,8 @@
       const open = eventState && eventState.status === "open";
       showMsg("", false);
       leaveBtn.hidden = true;
+      saveNickBtn.hidden = true;
+      nickWrap.hidden = true;
       primaryBtn.hidden = true;
       primaryBtn.onclick = null;
       primaryBtn.className = "btn";
@@ -385,7 +423,7 @@
 
       if (!google) {
         actionTitle.textContent = "Entrá para inscribirte";
-        actionSub.textContent = "Con Google quedás logueado y te apuntás en un clic.";
+        actionSub.textContent = "Con Google quedás logueado. Después elegís el nick de la lista.";
         primaryBtn.hidden = false;
         primaryBtn.className = "btn btn-google";
         primaryBtn.textContent = "Continuar con Google";
@@ -397,15 +435,18 @@
         actionTitle.textContent =
           myStatus === "waitlist" ? "Estás en lista de espera" : "Ya estás inscrito";
         actionSub.textContent =
-          myStatus === "waitlist"
-            ? "Si se libera una plaza, el organizador puede subirte."
-            : "Te esperamos. Podés volver a Eventos o salir de la lista.";
+          "Cuenta: " + (u.email || "") + ". Podés cambiar cómo aparecés en la lista.";
+        nickWrap.hidden = false;
+        fillNickDefault(u, window.__mineDisplayName || "");
+        saveNickBtn.hidden = false;
         leaveBtn.hidden = false;
         return;
       }
 
       actionTitle.textContent = "¿Te sumás?";
-      actionSub.textContent = "Te inscribís como " + niceName(u) + ".";
+      actionSub.textContent = "Elegí el nombre con el que querés aparecer en la lista.";
+      nickWrap.hidden = false;
+      fillNickDefault(u, "");
       primaryBtn.hidden = false;
       primaryBtn.className = "btn";
       primaryBtn.textContent = "Inscribirme";
@@ -507,6 +548,8 @@
         if (mine) {
           myStatus = mine.status === "waitlist" ? "waitlist" : "confirmed";
           window.__mineUid = mine.uid;
+          window.__mineDisplayName = mine.displayName || "";
+          window.__mineJoinedAt = mine.joinedAtEpochMs || Date.now();
         }
       }
       renderAction();
@@ -515,21 +558,33 @@
     async function joinEvent() {
       const u = auth && auth.currentUser;
       if (!isGoogle(u) || busy) return;
+      const name = readNick();
+      if (!name) {
+        showMsg("Elegí un nombre para la lista.", true);
+        nickInput.focus();
+        return;
+      }
+      const email = (u.email || "").trim().toLowerCase();
+      if (!email || !email.includes("@")) {
+        showMsg("Tu cuenta Google no trae email. Probá otra cuenta.", true);
+        return;
+      }
       busy = true;
       primaryBtn.disabled = true;
       try {
+        setStoredName(name);
         const fresh = await loadEvent(eventId);
         if (!fresh || fresh.status !== "open") throw new Error("Inscripción cerrada");
         const signups = await loadSignups();
-        const email = (u.email || "").toLowerCase();
-        const name = niceName(u).slice(0, 79);
         const already = signups.find((s) =>
           s.uid === u.uid ||
-          (email && s.email && s.email.toLowerCase() === email)
+          (s.email && s.email.toLowerCase() === email)
         );
         if (already) {
           myStatus = already.status === "waitlist" ? "waitlist" : "confirmed";
           window.__mineUid = already.uid;
+          window.__mineDisplayName = already.displayName || "";
+          window.__mineJoinedAt = already.joinedAtEpochMs || Date.now();
           eventState = fresh;
           fillEvent(eventState);
           renderRoster(signups);
@@ -539,7 +594,7 @@
         const status = fresh.joined < fresh.capacity ? "confirmed" : "waitlist";
         await setDoc(doc(db, "open_events", eventId, "signups", u.uid), {
           uid: u.uid,
-          displayName: name.slice(0, 79),
+          displayName: name,
           email,
           status,
           joinedAtEpochMs: Date.now(),
@@ -551,6 +606,7 @@
         fillEvent(eventState);
         myStatus = status;
         window.__mineUid = u.uid;
+        window.__mineDisplayName = name;
         await refreshMineAndRoster();
         showMsg(status === "waitlist" ? "Quedaste en reserva." : "¡Listo, estás inscrito!", false);
       } catch (e) {
@@ -559,6 +615,43 @@
       } finally {
         busy = false;
         primaryBtn.disabled = false;
+      }
+    }
+
+    async function saveNickOnList() {
+      const u = auth && auth.currentUser;
+      if (!isGoogle(u) || !myStatus || busy) return;
+      const name = readNick();
+      if (!name) {
+        showMsg("Escribí un nombre.", true);
+        return;
+      }
+      const signupUid = window.__mineUid || u.uid;
+      if (signupUid !== u.uid) {
+        showMsg("No podés editar una plaza de otra sesión.", true);
+        return;
+      }
+      busy = true;
+      saveNickBtn.disabled = true;
+      try {
+        setStoredName(name);
+        const email = (u.email || "").trim().toLowerCase();
+        await updateDoc(doc(db, "open_events", eventId, "signups", signupUid), {
+          uid: signupUid,
+          displayName: name,
+          email,
+          status: myStatus === "waitlist" ? "waitlist" : "confirmed",
+          joinedAtEpochMs: window.__mineJoinedAt || Date.now(),
+        });
+        window.__mineDisplayName = name;
+        await refreshMineAndRoster();
+        showMsg("Nombre actualizado en la lista.", false);
+      } catch (e) {
+        console.error(e);
+        showMsg(e.message || "No se pudo guardar el nombre.", true);
+      } finally {
+        busy = false;
+        saveNickBtn.disabled = false;
       }
     }
 
@@ -633,6 +726,7 @@
       await loginGoogle(true);
     });
     leaveBtn.addEventListener("click", leaveEvent);
+    saveNickBtn.addEventListener("click", saveNickOnList);
     document.getElementById("shareBtn").addEventListener("click", () => {
       const title = (eventState && eventState.title) || "Evento FixtureGo";
       const whenTxt = eventState && eventState.startsAt
