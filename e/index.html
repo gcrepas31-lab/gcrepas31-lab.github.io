@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Inscripción · FixtureGo</title>
   <meta name="description" content="Inscribite a un evento abierto en FixtureGo Padel." />
   <style>
-    :root {
+    :root, [data-theme="dark"] {
       --bg: #0b1f2e;
+      --bg2: #1a4a6e;
       --card: #123049;
       --text: #f4f7fb;
       --muted: #9fb3c8;
@@ -15,15 +16,34 @@
       --chip: #1e4d7a;
       --danger: #ffb4a8;
       --line: #2a5070;
+      --warn: #ffd27a;
+    }
+    [data-theme="light"] {
+      --bg: #eef5fa;
+      --bg2: #cfe0ee;
+      --card: #ffffff;
+      --text: #0b1f2e;
+      --muted: #5a7288;
+      --accent: #2f9e44;
+      --chip: #1e4d7a;
+      --danger: #c62828;
+      --line: #d0dde8;
+      --warn: #b86e00;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh;
       font-family: "Segoe UI", system-ui, sans-serif;
-      background: radial-gradient(1100px 520px at 15% -15%, #1a4a6e, var(--bg));
+      background: radial-gradient(1100px 520px at 15% -15%, var(--bg2), var(--bg));
       color: var(--text);
       padding: 20px 16px 48px;
     }
+    .alert {
+      display: inline-block; margin: 4px 6px 0 0; font-size: .78rem; font-weight: 700;
+      color: var(--warn); background: rgba(255,210,122,.12);
+      padding: 3px 8px; border-radius: 999px;
+    }
+    #alertsBox { margin: 8px 0 4px; }
     .wrap { max-width: 440px; margin: 0 auto; }
     [hidden] { display: none !important; }
 
@@ -136,6 +156,8 @@
         <p class="meta" id="venue"></p>
         <p class="meta" id="spots"></p>
         <p class="meta" id="min"></p>
+        <p class="meta" id="closes"></p>
+        <div id="alertsBox"></div>
 
         <div class="roster" id="rosterBox" hidden>
           <h3>Inscritos</h3>
@@ -152,8 +174,12 @@
           <p class="msg" id="msg" hidden></p>
         </div>
 
-        <div class="footer">
+        <div class="footer" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+          <button type="button" class="linkish" id="shareBtn" style="color:var(--accent);font-weight:700">
+            Compartir por WhatsApp
+          </button>
           <a id="openApp" href="#">Abrir en la app</a>
+          <a href="../eventos/#datos" style="color:var(--muted);font-size:.85rem">Editar mi nombre</a>
         </div>
       </div>
     </div>
@@ -169,6 +195,11 @@
     import {
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc, deleteDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      niceName, greetName, initial, applySavedTheme,
+    } from "../js/profile.js";
+
+    applySavedTheme();
 
     const params = new URLSearchParams(location.search);
     let eventId = params.get("id");
@@ -230,21 +261,6 @@
       return !!(u && !u.isAnonymous && u.providerData &&
         u.providerData.some((p) => p.providerId === "google.com"));
     }
-    function niceName(u) {
-      const dn = ((u && u.displayName) || "").trim();
-      if (dn) return dn;
-      const local = ((u && u.email) || "").split("@")[0];
-      return local || "Jugador";
-    }
-    function greetName(u) {
-      const dn = ((u && u.displayName) || "").trim();
-      if (dn) return dn.split(/\s+/)[0];
-      const local = ((u && u.email) || "").split("@")[0];
-      return local || "jugador";
-    }
-    function initial(u) {
-      return greetName(u).charAt(0).toUpperCase() || "F";
-    }
     function mobile() {
       return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(
         navigator.userAgent || "",
@@ -290,6 +306,29 @@
       document.getElementById("spots").textContent = spots;
       document.getElementById("min").textContent =
         s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
+      const closesEl = document.getElementById("closes");
+      if (s.closesAt) {
+        closesEl.hidden = false;
+        closesEl.textContent = "Cierra inscripción: " +
+          new Date(s.closesAt).toLocaleString("es", {
+            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+          });
+      } else {
+        closesEl.hidden = true;
+      }
+      const alerts = document.getElementById("alertsBox");
+      const bits = [];
+      const left = Math.max(0, (s.capacity || 0) - (s.joined || 0));
+      if (s.status === "open" && left > 0 && left <= 2) {
+        bits.push("Quedan " + left + " plaza" + (left === 1 ? "" : "s"));
+      } else if (s.status === "open" && left === 0) {
+        bits.push("Completo · lista de espera");
+      }
+      if (s.closesAt && s.closesAt > Date.now()) {
+        const h = Math.round((s.closesAt - Date.now()) / 3600000);
+        if (h <= 48) bits.push(h <= 1 ? "Cierra en ~1 h" : "Cierra en ~" + h + " h");
+      }
+      alerts.innerHTML = bits.map((t) => '<span class="alert">' + t + "</span>").join("");
     }
 
     function renderRoster(signups) {
@@ -443,6 +482,7 @@
         zone: d.zone || "",
         venue: d.venueText || "",
         status: d.status || "open",
+        closesAt: d.registrationClosesAtEpochMs || null,
       };
     }
 
@@ -535,8 +575,30 @@
             "Esta plaza se anotó con otra sesión. Pedile al organizador que te saque."
           );
         }
+        const before = await getDoc(doc(db, "open_events", eventId, "signups", signupUid));
+        const wasConfirmed = before.exists() && before.data().status !== "waitlist";
         await deleteDoc(doc(db, "open_events", eventId, "signups", signupUid));
-        const remaining = await loadSignups();
+        let remaining = await loadSignups();
+        if (wasConfirmed) {
+          const firstWait = remaining
+            .filter((s) => s.status === "waitlist")
+            .sort((a, b) => (a.joinedAtEpochMs || 0) - (b.joinedAtEpochMs || 0))[0];
+          if (firstWait) {
+            try {
+              await updateDoc(
+                doc(db, "open_events", eventId, "signups", firstWait.uid || firstWait.id),
+                { status: "confirmed" },
+              );
+              remaining = remaining.map((s) =>
+                (s.uid || s.id) === (firstWait.uid || firstWait.id)
+                  ? { ...s, status: "confirmed" }
+                  : s
+              );
+            } catch (pe) {
+              console.warn("promote", pe);
+            }
+          }
+        }
         const joinedCount = remaining.filter((s) => s.status !== "waitlist").length;
         const waitlistCount = remaining.filter((s) => s.status === "waitlist").length;
         await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
@@ -571,6 +633,19 @@
       await loginGoogle(true);
     });
     leaveBtn.addEventListener("click", leaveEvent);
+    document.getElementById("shareBtn").addEventListener("click", () => {
+      const title = (eventState && eventState.title) || "Evento FixtureGo";
+      const whenTxt = eventState && eventState.startsAt
+        ? new Date(eventState.startsAt).toLocaleString("es", {
+            weekday: "short", day: "numeric", month: "short",
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "";
+      const url = "https://fixturego.com/e/?id=" + encodeURIComponent(eventId);
+      const text = "¡Sumate a " + title + (whenTxt ? " (" + whenTxt + ")" : "") +
+        " en FixtureGo!\n" + url;
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    });
 
     if (!ready) {
       document.getElementById("loading").textContent = "Falta configurar Firebase.";
