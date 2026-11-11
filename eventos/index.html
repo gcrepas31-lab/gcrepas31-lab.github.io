@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FixtureGo · Eventos</title>
   <meta name="description" content="Inscripciones abiertas FixtureGo Padel." />
   <style>
-    :root {
+    :root, [data-theme="dark"] {
       --bg: #0b1f2e;
+      --bg2: #1a4a6e;
       --card: #123049;
       --text: #f4f7fb;
       --muted: #9fb3c8;
@@ -15,12 +16,27 @@
       --chip: #1e4d7a;
       --danger: #ffb4a8;
       --line: #2a5070;
+      --warn: #ffd27a;
+      --on-accent: #0b1f2e;
+    }
+    [data-theme="light"] {
+      --bg: #eef5fa;
+      --bg2: #cfe0ee;
+      --card: #ffffff;
+      --text: #0b1f2e;
+      --muted: #5a7288;
+      --accent: #2f9e44;
+      --chip: #1e4d7a;
+      --danger: #c62828;
+      --line: #d0dde8;
+      --warn: #b86e00;
+      --on-accent: #ffffff;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh;
       font-family: "Segoe UI", system-ui, sans-serif;
-      background: radial-gradient(1100px 520px at 15% -15%, #1a4a6e, var(--bg));
+      background: radial-gradient(1100px 520px at 15% -15%, var(--bg2), var(--bg));
       color: var(--text);
       padding: 24px 16px 40px;
     }
@@ -32,18 +48,30 @@
       justify-content: center; text-align: center; padding: 12px 4px;
     }
     .gate .brand {
-      width: 80px; height: 80px; border-radius: 18px; object-fit: cover;
+      width: 88px; height: 88px; border-radius: 20px; object-fit: cover;
       margin: 0 auto 18px; background: var(--card);
-      box-shadow: 0 12px 28px rgba(0,0,0,.35);
+      box-shadow: 0 12px 28px rgba(0,0,0,.28);
     }
     .gate h1 { font-size: 1.8rem; margin: 0 0 10px; letter-spacing: -.02em; }
-    .gate p { color: var(--muted); margin: 0 0 26px; line-height: 1.45; font-size: 1rem; }
-    .gate .hint { margin-top: 16px; font-size: .85rem; color: var(--muted); }
+    .gate p { color: var(--muted); margin: 0 0 22px; line-height: 1.45; font-size: 1rem; }
+    .gate .hint { margin-top: 14px; font-size: .85rem; color: var(--muted); }
+    .soon {
+      margin-top: 18px; padding: 12px; border-radius: 12px;
+      border: 1px dashed var(--line); color: var(--muted); font-size: .82rem;
+    }
+
+    .brand-bar {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .brand-bar img {
+      width: 40px; height: 40px; border-radius: 10px; object-fit: cover;
+    }
+    .brand-bar strong { font-size: 1.05rem; }
 
     .profile {
       display: flex; align-items: center; gap: 12px;
       background: var(--card); border: 1px solid var(--line);
-      border-radius: 16px; padding: 12px 14px; margin-bottom: 16px;
+      border-radius: 16px; padding: 12px 14px; margin-bottom: 14px;
     }
     .avatar {
       width: 44px; height: 44px; border-radius: 50%;
@@ -65,28 +93,23 @@
       background: none; border: none; color: var(--muted); cursor: pointer;
       font-size: .8rem; text-decoration: underline; padding: 2px 0; white-space: nowrap;
     }
-    .linkish:hover { color: var(--text); }
-
-    .page-title { font-size: 1.25rem; margin: 0 0 12px; font-weight: 700; }
 
     .tabs {
       display: flex; gap: 6px; margin-bottom: 14px;
-      background: rgba(0,0,0,.18); border-radius: 999px; padding: 4px;
+      background: rgba(0,0,0,.12); border-radius: 999px; padding: 4px;
     }
     .tab {
-      flex: 1; padding: 10px; border: none; border-radius: 999px;
+      flex: 1; padding: 10px 6px; border: none; border-radius: 999px;
       background: transparent; color: var(--muted); font-weight: 700;
-      cursor: pointer; font-size: .9rem;
+      cursor: pointer; font-size: .82rem;
     }
-    .tab.active { background: var(--accent); color: #0b1f2e; }
+    .tab.active { background: var(--accent); color: var(--on-accent); }
 
-    .card {
-      display: block; text-decoration: none; color: inherit;
-      background: var(--card); border-radius: 16px; padding: 16px 18px;
-      margin-bottom: 10px; border: 1px solid rgba(255,255,255,.04);
-      transition: border-color .15s ease;
+    .card-wrap {
+      background: var(--card); border-radius: 16px; padding: 14px 16px;
+      margin-bottom: 10px; border: 1px solid rgba(127,127,127,.12);
     }
-    .card:hover, .card:active { border-color: var(--accent); }
+    .card-link { display: block; text-decoration: none; color: inherit; }
     .chip {
       display: inline-block; background: var(--chip); color: #fff;
       font-size: .68rem; font-weight: 700; letter-spacing: .04em;
@@ -94,19 +117,47 @@
     }
     .badge {
       float: right; font-size: .72rem; color: var(--accent); font-weight: 700;
-      margin-top: 2px;
     }
-    .card h2 { font-size: 1.12rem; margin: 0 0 4px; }
+    .card-wrap h2 { font-size: 1.1rem; margin: 0 0 4px; }
     .meta { color: var(--muted); font-size: .9rem; margin: 2px 0; }
-    .chev { float: right; color: var(--muted); font-size: 1.1rem; margin-top: -2px; }
+    .alert {
+      display: inline-block; margin-top: 6px; font-size: .78rem; font-weight: 700;
+      color: var(--warn); background: rgba(255,210,122,.12);
+      padding: 3px 8px; border-radius: 999px;
+    }
+    .card-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-sm {
+      flex: 1; border: 1px solid var(--line); background: transparent;
+      color: var(--text); border-radius: 999px; padding: 8px 10px;
+      font-size: .82rem; font-weight: 700; cursor: pointer; text-align: center;
+      text-decoration: none;
+    }
+    .btn-sm.danger { color: var(--danger); border-color: var(--danger); }
 
     .btn {
       display: block; width: 100%; text-align: center; border: none;
-      background: var(--accent); color: #0b1f2e; font-weight: 700;
+      background: var(--accent); color: var(--on-accent); font-weight: 700;
       padding: 14px 18px; border-radius: 999px; cursor: pointer; font-size: 1rem;
     }
     .btn:disabled { opacity: .55; cursor: not-allowed; }
     .btn-google { background: #fff; color: #1f1f1f; }
+    .btn-secondary {
+      background: transparent; color: var(--accent); border: 1px solid var(--accent);
+      margin-top: 10px;
+    }
+
+    label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 4px; text-align: left; }
+    input, select {
+      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
+      background: var(--bg); color: var(--text); font-size: 1rem;
+    }
+
+    .panel {
+      background: var(--card); border-radius: 16px; padding: 16px 18px;
+      border: 1px solid var(--line);
+    }
+    .panel h2 { margin: 0 0 6px; font-size: 1.15rem; }
+    .panel .lead { color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
 
     .empty, .loading, .err {
       text-align: center; color: var(--muted); padding: 36px 12px; font-size: .95rem;
@@ -114,6 +165,12 @@
     }
     .err { color: var(--danger); }
     .err a { color: var(--accent); }
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--accent); color: var(--text);
+      padding: 10px 16px; border-radius: 999px; font-size: .9rem; z-index: 20;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
   </style>
   <script src="../e/firebase-config.js"></script>
 </head>
@@ -123,13 +180,22 @@
       <img class="brand" src="../logo-fixturego.jpg" alt="FixtureGo"
            onerror="this.style.display='none'" />
       <h1>FixtureGo</h1>
-      <p>Entrá con Google para ver eventos abiertos e inscribirte en un clic.</p>
+      <p>Entrá para ver eventos abiertos e inscribirte en un clic.</p>
       <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
-      <p class="hint" id="gateHint">Por ahora el acceso es solo con Google. Quedás logueado en este navegador.</p>
+      <div class="soon">
+        Pronto: Apple y acceso por email.<br>
+        Por ahora usá Google (podés cambiar de cuenta después).
+      </div>
+      <p class="hint" id="gateHint">Quedás logueado en este navegador.</p>
       <p class="err" id="gateErr" hidden></p>
     </section>
 
     <section id="app" hidden>
+      <div class="brand-bar">
+        <img src="../logo-fixturego.jpg" alt="" onerror="this.style.display='none'" />
+        <strong>FixtureGo</strong>
+      </div>
+
       <div class="profile">
         <div class="avatar" id="avatar">G</div>
         <div class="who">
@@ -142,38 +208,59 @@
         </div>
       </div>
 
-      <h2 class="page-title">Eventos</h2>
-
       <div class="tabs">
         <button type="button" class="tab active" id="tabOpen">Abiertos</button>
-        <button type="button" class="tab" id="tabMine">Mis inscripciones</button>
+        <button type="button" class="tab" id="tabMine">Mis insc.</button>
+        <button type="button" class="tab" id="tabDatos">Mis datos</button>
       </div>
 
       <div id="list" class="loading">Cargando…</div>
+
+      <div id="datos" class="panel" hidden>
+        <h2>Mis datos</h2>
+        <p class="lead">Este nombre se usa al inscribirte y en el saludo.</p>
+        <label for="nameInput">Nombre visible</label>
+        <input id="nameInput" maxlength="79" autocomplete="nickname" />
+        <label for="themeSelect">Tema</label>
+        <select id="themeSelect">
+          <option value="dark">Oscuro</option>
+          <option value="light">Claro</option>
+        </select>
+        <p class="meta" id="datosEmail" style="margin-top:12px"></p>
+        <button type="button" class="btn" id="saveDatosBtn" style="margin-top:14px">Guardar</button>
+        <button type="button" class="btn btn-secondary" id="switchFromDatos">Cambiar cuenta Google</button>
+      </div>
     </section>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getAuth, signOut, onAuthStateChanged,
+      getAuth, signOut, onAuthStateChanged, updateProfile,
       GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
       signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
-      getFirestore, collection, query, where, orderBy, getDocs, getDoc,
-      collectionGroup,
+      getFirestore, collection, query, where, orderBy, getDocs, getDoc, doc,
+      collectionGroup, deleteDoc, updateDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import {
+      niceName, greetName, initial, getStoredName, setStoredName,
+      applySavedTheme, setTheme, getTheme,
+    } from "../js/profile.js";
+
+    applySavedTheme();
 
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
     const gate = document.getElementById("gate");
     const appEl = document.getElementById("app");
     const listEl = document.getElementById("list");
+    const datosEl = document.getElementById("datos");
     const gateErr = document.getElementById("gateErr");
     const googleBtn = document.getElementById("googleBtn");
 
-    let tab = "open";
+    let tab = location.hash === "#datos" ? "datos" : "open";
     let auth = null;
     let db = null;
     let booted = false;
@@ -182,22 +269,6 @@
     function isGoogle(u) {
       return !!(u && !u.isAnonymous && u.providerData &&
         u.providerData.some((p) => p.providerId === "google.com"));
-    }
-    /** Nombre visible: displayName → parte del email → Jugador */
-    function niceName(u) {
-      const dn = ((u && u.displayName) || "").trim();
-      if (dn) return dn;
-      const local = ((u && u.email) || "").split("@")[0];
-      return local || "Jugador";
-    }
-    function greetName(u) {
-      const dn = ((u && u.displayName) || "").trim();
-      if (dn) return dn.split(/\s+/)[0];
-      const local = ((u && u.email) || "").split("@")[0];
-      return local || "jugador";
-    }
-    function initial(u) {
-      return greetName(u).charAt(0).toUpperCase() || "F";
     }
     function mobile() {
       return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(
@@ -216,6 +287,30 @@
         hour: "2-digit", minute: "2-digit",
       });
     }
+    function toast(text) {
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = text;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2200);
+    }
+    function spotsLeft(ev) {
+      return Math.max(0, (ev.capacity || 0) - (ev.joinedCount || 0));
+    }
+    function alertBits(ev) {
+      const bits = [];
+      const left = spotsLeft(ev);
+      if (left > 0 && left <= 2) bits.push("Quedan " + left + " plaza" + (left === 1 ? "" : "s"));
+      else if (left === 0) bits.push("Completo · reserva");
+      const closes = ev.registrationClosesAtEpochMs;
+      if (closes && closes > Date.now()) {
+        const h = Math.round((closes - Date.now()) / 3600000);
+        if (h <= 48) {
+          bits.push(h <= 1 ? "Cierra en ~1 h" : "Cierra en ~" + h + " h");
+        }
+      }
+      return bits;
+    }
 
     function showGate(err) {
       gate.hidden = false;
@@ -230,6 +325,9 @@
       document.getElementById("hello").textContent = "¡Hola, " + greetName(u) + "!";
       document.getElementById("emailLine").textContent = u.email || "";
       document.getElementById("avatar").textContent = initial(u);
+      document.getElementById("nameInput").value = niceName(u);
+      document.getElementById("datosEmail").textContent = "Cuenta: " + (u.email || "—");
+      document.getElementById("themeSelect").value = getTheme();
     }
 
     async function finishRedirect() {
@@ -242,20 +340,14 @@
             code === "auth/account-exists-with-different-credential") {
           const cred = GoogleAuthProvider.credentialFromError(e);
           if (cred) await signInWithCredential(auth, cred);
-        } else {
-          console.warn(e);
-        }
+        } else console.warn(e);
       }
     }
 
     async function loginGoogle(pickAccount) {
       googleBtn.disabled = true;
       document.getElementById("gateHint").textContent = "Abriendo Google…";
-      if (pickAccount) {
-        provider.setCustomParameters({ prompt: "select_account" });
-      } else {
-        provider.setCustomParameters({});
-      }
+      provider.setCustomParameters(pickAccount ? { prompt: "select_account" } : {});
       try {
         if (mobile()) {
           await signInWithRedirect(auth, provider);
@@ -281,27 +373,103 @@
       } finally {
         googleBtn.disabled = false;
         document.getElementById("gateHint").textContent =
-          "Por ahora el acceso es solo con Google. Quedás logueado en este navegador.";
+          "Quedás logueado en este navegador.";
       }
     }
 
-    function card(ev, badge) {
-      const a = document.createElement("a");
-      a.className = "card";
-      a.href = "../e/?id=" + encodeURIComponent(ev.id);
+    function eventCard(ev, opts) {
+      opts = opts || {};
+      const wrap = document.createElement("div");
+      wrap.className = "card-wrap";
       const type = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
+      const left = spotsLeft(ev);
       const spots = (ev.joinedCount || 0) + " / " + (ev.capacity || 0) + " plazas";
+      const alerts = alertBits(ev).map((t) =>
+        '<span class="alert">' + escapeHtml(t) + "</span>"
+      ).join(" ");
+      const a = document.createElement("a");
+      a.className = "card-link";
+      a.href = "../e/?id=" + encodeURIComponent(ev.id);
       a.innerHTML =
-        '<span class="chev">›</span>' +
-        (badge ? '<span class="badge">' + badge + "</span>" : "") +
+        (opts.badge ? '<span class="badge">' + opts.badge + "</span>" : "") +
         '<span class="chip">' + type + "</span>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
         '<p class="meta">' + when(ev.startsAtEpochMs) + "</p>" +
         (ev.zone || ev.venueText
           ? '<p class="meta">' + escapeHtml(ev.zone || ev.venueText) + "</p>"
           : "") +
-        '<p class="meta">' + spots + "</p>";
-      return a;
+        '<p class="meta">' + spots +
+          (left > 0 ? " · " + left + " libre" + (left === 1 ? "" : "s") : "") +
+        "</p>" +
+        (alerts ? "<div>" + alerts + "</div>" : "");
+      wrap.appendChild(a);
+      if (opts.canLeave) {
+        const actions = document.createElement("div");
+        actions.className = "card-actions";
+        const open = document.createElement("a");
+        open.className = "btn-sm";
+        open.href = "../e/?id=" + encodeURIComponent(ev.id);
+        open.textContent = "Ver";
+        const leave = document.createElement("button");
+        leave.type = "button";
+        leave.className = "btn-sm danger";
+        leave.textContent = "Borrarme";
+        leave.addEventListener("click", () => leaveEvent(ev.id, leave));
+        actions.appendChild(open);
+        actions.appendChild(leave);
+        wrap.appendChild(actions);
+      }
+      return wrap;
+    }
+
+    async function promoteFirstWaitlist(eventId, remaining) {
+      const wait = remaining
+        .filter((s) => s.status === "waitlist")
+        .sort((a, b) => (a.joinedAtEpochMs || 0) - (b.joinedAtEpochMs || 0));
+      if (!wait.length) return remaining;
+      const first = wait[0];
+      try {
+        await updateDoc(doc(db, "open_events", eventId, "signups", first.uid || first.id), {
+          status: "confirmed",
+        });
+        return remaining.map((s) =>
+          (s.uid || s.id) === (first.uid || first.id)
+            ? { ...s, status: "confirmed" }
+            : s
+        );
+      } catch (e) {
+        console.warn("promote", e);
+        return remaining;
+      }
+    }
+
+    async function leaveEvent(eventId, btn) {
+      const u = auth && auth.currentUser;
+      if (!isGoogle(u)) return;
+      if (!confirm("¿Borrarte de este evento?")) return;
+      if (btn) btn.disabled = true;
+      try {
+        const signupRef = doc(db, "open_events", eventId, "signups", u.uid);
+        const mine = await getDoc(signupRef);
+        if (!mine.exists()) throw new Error("No encontramos tu inscripción.");
+        const wasConfirmed = mine.data().status !== "waitlist";
+        await deleteDoc(signupRef);
+        let snap = await getDocs(collection(db, "open_events", eventId, "signups"));
+        let remaining = [];
+        snap.forEach((d) => remaining.push({ id: d.id, ...d.data() }));
+        if (wasConfirmed) {
+          remaining = await promoteFirstWaitlist(eventId, remaining);
+        }
+        const joinedCount = remaining.filter((s) => s.status !== "waitlist").length;
+        const waitlistCount = remaining.filter((s) => s.status === "waitlist").length;
+        await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
+        toast("Te borraste del evento");
+        await refresh();
+      } catch (e) {
+        console.error(e);
+        toast(e.message || "No se pudo borrar");
+        if (btn) btn.disabled = false;
+      }
     }
 
     async function loadOpen() {
@@ -325,11 +493,7 @@
         if (!er) continue;
         const ev = await getDoc(er);
         if (!ev.exists()) continue;
-        items.push({
-          id: ev.id,
-          ...ev.data(),
-          _st: d.data().status,
-        });
+        items.push({ id: ev.id, ...ev.data(), _st: d.data().status });
       }
       items.sort((a, b) => (a.startsAtEpochMs || 0) - (b.startsAtEpochMs || 0));
       return items;
@@ -341,6 +505,13 @@
     }
 
     async function refresh() {
+      if (tab === "datos") {
+        listEl.hidden = true;
+        datosEl.hidden = false;
+        return;
+      }
+      listEl.hidden = false;
+      datosEl.hidden = true;
       listEl.className = "loading";
       listEl.textContent = "Cargando…";
       try {
@@ -353,17 +524,17 @@
             listEl.textContent = "No hay eventos abiertos por ahora.";
             return;
           }
-          list.forEach((ev) => listEl.appendChild(card(ev)));
+          list.forEach((ev) => listEl.appendChild(eventCard(ev)));
         } else {
           const items = await loadMine(auth.currentUser.uid);
           if (!items.length) {
             listEl.className = "empty";
-            listEl.textContent = "Todavía no te anotaste a ningún evento. Mirá Abiertos.";
+            listEl.textContent = "Todavía no te anotaste a ningún evento.";
             return;
           }
           items.forEach((ev) => {
             const badge = ev._st === "waitlist" ? "Reserva" : "Inscrito";
-            listEl.appendChild(card(ev, badge));
+            listEl.appendChild(eventCard(ev, { badge, canLeave: true }));
           });
         }
       } catch (e) {
@@ -374,7 +545,7 @@
           listEl.innerHTML =
             "Falta un índice de Firestore para “Mis inscripciones”.<br><br>" +
             '<a href="' + link + '" target="_blank" rel="noopener">Crear índice en Firebase</a>' +
-            "<br><br>Cuando diga Enabled, recargá esta página.";
+            "<br><br>Cuando diga Enabled, recargá.";
         } else {
           listEl.textContent = (e && e.message) || "Error al cargar.";
         }
@@ -385,7 +556,27 @@
       tab = next;
       document.getElementById("tabOpen").classList.toggle("active", next === "open");
       document.getElementById("tabMine").classList.toggle("active", next === "mine");
+      document.getElementById("tabDatos").classList.toggle("active", next === "datos");
+      if (next === "datos") history.replaceState(null, "", "#datos");
+      else if (location.hash) history.replaceState(null, "", location.pathname);
       refresh();
+    }
+
+    async function saveDatos() {
+      const u = auth.currentUser;
+      const name = setStoredName(document.getElementById("nameInput").value);
+      if (!name) {
+        toast("Poné un nombre");
+        return;
+      }
+      try {
+        if (u) await updateProfile(u, { displayName: name });
+      } catch (e) {
+        console.warn(e);
+      }
+      setTheme(document.getElementById("themeSelect").value);
+      showApp(auth.currentUser);
+      toast("Datos guardados");
     }
 
     googleBtn.addEventListener("click", () => loginGoogle(false));
@@ -398,8 +589,18 @@
       showGate("");
       await loginGoogle(true);
     });
+    document.getElementById("switchFromDatos").addEventListener("click", async () => {
+      await signOut(auth);
+      showGate("");
+      await loginGoogle(true);
+    });
+    document.getElementById("saveDatosBtn").addEventListener("click", saveDatos);
+    document.getElementById("themeSelect").addEventListener("change", (e) => {
+      setTheme(e.target.value);
+    });
     document.getElementById("tabOpen").addEventListener("click", () => setTab("open"));
     document.getElementById("tabMine").addEventListener("click", () => setTab("mine"));
+    document.getElementById("tabDatos").addEventListener("click", () => setTab("datos"));
 
     if (!ready) {
       showGate("Falta configurar Firebase en el sitio.");
@@ -409,13 +610,12 @@
       db = getFirestore(app);
       try { await setPersistence(auth, browserLocalPersistence); } catch (_) {}
       await finishRedirect();
-
       onAuthStateChanged(auth, async (u) => {
         if (isGoogle(u)) {
           showApp(u);
           if (!booted) {
             booted = true;
-            await refresh();
+            setTab(tab);
           } else if (!appEl.hidden) {
             await refresh();
           }
