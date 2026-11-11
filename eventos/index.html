@@ -184,7 +184,7 @@
       <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
       <div class="soon">
         Pronto: Apple y acceso por email.<br>
-        Por ahora usá Google (podés cambiar de cuenta después).
+        Al tocar Continuar, Google te deja elegir qué cuenta usar.
       </div>
       <p class="hint" id="gateHint">Quedás logueado en este navegador.</p>
       <p class="err" id="gateErr" hidden></p>
@@ -348,10 +348,11 @@
       }
     }
 
-    async function loginGoogle(pickAccount) {
+    async function loginGoogle() {
       googleBtn.disabled = true;
       document.getElementById("gateHint").textContent = "Abriendo Google…";
-      provider.setCustomParameters(pickAccount ? { prompt: "select_account" } : {});
+      // Siempre selector de cuenta (iOS reutiliza la última sin preguntar).
+      provider.setCustomParameters({ prompt: "select_account" });
       try {
         if (mobile()) {
           await signInWithRedirect(auth, provider);
@@ -583,7 +584,7 @@
       toast("Datos guardados");
     }
 
-    googleBtn.addEventListener("click", () => loginGoogle(false));
+    googleBtn.addEventListener("click", () => loginGoogle());
     document.getElementById("signOutBtn").addEventListener("click", async () => {
       await signOut(auth);
       showGate("");
@@ -591,12 +592,12 @@
     document.getElementById("switchBtn").addEventListener("click", async () => {
       await signOut(auth);
       showGate("");
-      await loginGoogle(true);
+      await loginGoogle();
     });
     document.getElementById("switchFromDatos").addEventListener("click", async () => {
       await signOut(auth);
       showGate("");
-      await loginGoogle(true);
+      await loginGoogle();
     });
     document.getElementById("saveDatosBtn").addEventListener("click", saveDatos);
     document.getElementById("themeSelect").addEventListener("change", (e) => {

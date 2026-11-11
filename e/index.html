@@ -427,7 +427,7 @@
         primaryBtn.hidden = false;
         primaryBtn.className = "btn btn-google";
         primaryBtn.textContent = "Continuar con Google";
-        primaryBtn.onclick = () => loginGoogle();
+        primaryBtn.onclick = () => loginGoogle(true);
         return;
       }
 
@@ -467,16 +467,13 @@
       }
     }
 
-    async function loginGoogle(pickAccount) {
+    async function loginGoogle() {
       if (busy) return;
       busy = true;
       primaryBtn.disabled = true;
       actionSub.textContent = "Abriendo Google…";
-      if (pickAccount) {
-        provider.setCustomParameters({ prompt: "select_account" });
-      } else {
-        provider.setCustomParameters({});
-      }
+      // Siempre selector de cuenta (Safari/iOS reutiliza la última sin preguntar).
+      provider.setCustomParameters({ prompt: "select_account" });
       try {
         if (mobile()) {
           await signInWithRedirect(auth, provider);
@@ -723,7 +720,7 @@
       await signOut(auth);
       myStatus = null;
       renderAction();
-      await loginGoogle(true);
+      await loginGoogle();
     });
     leaveBtn.addEventListener("click", leaveEvent);
     saveNickBtn.addEventListener("click", saveNickOnList);
