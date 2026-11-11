@@ -5,4 +5,7 @@ window.FIXTUREGO_FIREBASE = {
   storageBucket: "fixturego.firebasestorage.app",
   messagingSenderId: "521928350799",
   appId: "1:521928350799:web:81696ed88a708a4d8d5e3a",
+  // Web client (oauth client_type 3) — login GIS en iPhone / Chrome
+  googleWebClientId:
+    "521928350799-sj72j469em3v4srsmalsfsfta4qok0vc.apps.googleusercontent.com",
 };

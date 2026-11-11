@@ -210,7 +210,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
       getAuth, signOut, onAuthStateChanged,
-      GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+      GoogleAuthProvider, signInWithPopup, getRedirectResult,
       signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
@@ -219,6 +219,7 @@
     import {
       niceName, greetName, initial, applySavedTheme, setStoredName, getStoredName,
     } from "../js/profile.js";
+    import { signInWithGoogleId } from "../js/googleAuth.js";
 
     applySavedTheme();
 
@@ -454,8 +455,10 @@
     }
 
     async function finishRedirect() {
+      // Compat: intentos viejos con redirect (en iPhone suele devolver null).
       try {
-        await getRedirectResult(auth);
+        const res = await getRedirectResult(auth);
+        if (res && res.user) return res.user;
       } catch (e) {
         const code = e && e.code;
         if (code === "auth/credential-already-in-use" ||
@@ -465,6 +468,7 @@
           if (cred) await signInWithCredential(auth, cred);
         } else console.warn(e);
       }
+      return null;
     }
 
     async function loginGoogle() {
@@ -472,31 +476,29 @@
       busy = true;
       primaryBtn.disabled = true;
       actionSub.textContent = "Abriendo Google…";
-      // Siempre selector de cuenta (Safari/iOS reutiliza la última sin preguntar).
-      provider.setCustomParameters({ prompt: "select_account" });
       try {
-        if (mobile()) {
-          await signInWithRedirect(auth, provider);
-          return;
-        }
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (e) {
-          if (e && (e.code === "auth/popup-blocked" ||
-              e.code === "auth/operation-not-supported-in-this-environment" ||
-              e.code === "auth/cancelled-popup-request")) {
-            await signInWithRedirect(auth, provider);
-            return;
-          }
-          throw e;
-        }
+        // GIS + credential: funciona en iPhone/Chrome con dominio en GitHub Pages.
+        await signInWithGoogleId(auth, GoogleAuthProvider, signInWithCredential);
+        await refreshMineAndRoster();
+        showMsg("Sesión iniciada.", false);
       } catch (e) {
-        if (e && e.code === "auth/popup-closed-by-user") {
-          showMsg("Cerraste la ventana. Probá de nuevo.", true);
-        } else {
-          showMsg(e.message || "No se pudo iniciar sesión.", true);
+        console.warn("GIS login falló, intento popup…", e);
+        try {
+          provider.setCustomParameters({ prompt: "select_account" });
+          await signInWithPopup(auth, provider);
+          await refreshMineAndRoster();
+          showMsg("Sesión iniciada.", false);
+        } catch (e2) {
+          if (e2 && e2.code === "auth/popup-closed-by-user") {
+            showMsg("Cerraste la ventana. Probá de nuevo.", true);
+          } else {
+            showMsg(
+              (e && e.message) || (e2 && e2.message) || "No se pudo iniciar sesión.",
+              true,
+            );
+          }
+          renderAction();
         }
-        renderAction();
       } finally {
         busy = false;
         primaryBtn.disabled = false;

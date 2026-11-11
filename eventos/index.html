@@ -241,7 +241,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
       getAuth, signOut, onAuthStateChanged, updateProfile,
-      GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+      GoogleAuthProvider, signInWithPopup, getRedirectResult,
       signInWithCredential, setPersistence, browserLocalPersistence,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
@@ -252,6 +252,7 @@
       niceName, greetName, initial, getStoredName, setStoredName,
       applySavedTheme, setTheme, getTheme,
     } from "../js/profile.js";
+    import { signInWithGoogleId } from "../js/googleAuth.js";
 
     applySavedTheme();
 
@@ -351,29 +352,22 @@
     async function loginGoogle() {
       googleBtn.disabled = true;
       document.getElementById("gateHint").textContent = "Abriendo Google…";
-      // Siempre selector de cuenta (iOS reutiliza la última sin preguntar).
-      provider.setCustomParameters({ prompt: "select_account" });
       try {
-        if (mobile()) {
-          await signInWithRedirect(auth, provider);
-          return;
-        }
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (e) {
-          if (e && (e.code === "auth/popup-blocked" ||
-              e.code === "auth/operation-not-supported-in-this-environment" ||
-              e.code === "auth/cancelled-popup-request")) {
-            await signInWithRedirect(auth, provider);
-            return;
-          }
-          throw e;
-        }
+        // GIS + credential (iPhone / GitHub Pages: redirect de Firebase no deja sesión).
+        await signInWithGoogleId(auth, GoogleAuthProvider, signInWithCredential);
       } catch (e) {
-        if (e && e.code === "auth/popup-closed-by-user") {
-          showGate("Cerraste la ventana. Probá de nuevo cuando quieras.");
-        } else {
-          showGate(e.message || "No se pudo iniciar sesión.");
+        console.warn("GIS login falló, intento popup…", e);
+        try {
+          provider.setCustomParameters({ prompt: "select_account" });
+          await signInWithPopup(auth, provider);
+        } catch (e2) {
+          if (e2 && e2.code === "auth/popup-closed-by-user") {
+            showGate("Cerraste la ventana. Probá de nuevo cuando quieras.");
+          } else {
+            showGate(
+              (e && e.message) || (e2 && e2.message) || "No se pudo iniciar sesión.",
+            );
+          }
         }
       } finally {
         googleBtn.disabled = false;
