@@ -27,32 +27,47 @@
     .wrap { max-width: 480px; margin: 0 auto; }
     [hidden] { display: none !important; }
 
-    /* —— Pantalla login —— */
     .gate {
-      min-height: 70vh; display: flex; flex-direction: column;
+      min-height: 72vh; display: flex; flex-direction: column;
       justify-content: center; text-align: center; padding: 12px 4px;
     }
     .gate .brand {
-      width: 72px; height: 72px; border-radius: 16px; object-fit: cover;
+      width: 80px; height: 80px; border-radius: 18px; object-fit: cover;
       margin: 0 auto 18px; background: var(--card);
+      box-shadow: 0 12px 28px rgba(0,0,0,.35);
     }
-    .gate h1 { font-size: 1.75rem; margin: 0 0 8px; letter-spacing: -.02em; }
-    .gate p { color: var(--muted); margin: 0 0 28px; line-height: 1.45; font-size: 1rem; }
-    .gate .hint { margin-top: 18px; font-size: .85rem; color: var(--muted); }
+    .gate h1 { font-size: 1.8rem; margin: 0 0 10px; letter-spacing: -.02em; }
+    .gate p { color: var(--muted); margin: 0 0 26px; line-height: 1.45; font-size: 1rem; }
+    .gate .hint { margin-top: 16px; font-size: .85rem; color: var(--muted); }
 
-    /* —— App logueada —— */
-    .top {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; margin-bottom: 18px;
+    .profile {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 16px; padding: 12px 14px; margin-bottom: 16px;
     }
-    .top h1 { font-size: 1.35rem; margin: 0; }
-    .top .hello { margin: 4px 0 0; color: var(--accent); font-weight: 700; font-size: 1rem; }
-    .top .email { margin: 2px 0 0; color: var(--muted); font-size: .8rem; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, #2a6b45, var(--accent));
+      color: #0b1f2e; font-weight: 800; font-size: 1.1rem;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .profile .who { flex: 1; min-width: 0; }
+    .profile .hello {
+      margin: 0; color: var(--accent); font-weight: 700; font-size: 1.05rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .profile .email {
+      margin: 2px 0 0; color: var(--muted); font-size: .8rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .profile .actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
     .linkish {
       background: none; border: none; color: var(--muted); cursor: pointer;
-      font-size: .85rem; text-decoration: underline; padding: 4px 0; white-space: nowrap;
+      font-size: .8rem; text-decoration: underline; padding: 2px 0; white-space: nowrap;
     }
     .linkish:hover { color: var(--text); }
+
+    .page-title { font-size: 1.25rem; margin: 0 0 12px; font-weight: 700; }
 
     .tabs {
       display: flex; gap: 6px; margin-bottom: 14px;
@@ -68,9 +83,10 @@
     .card {
       display: block; text-decoration: none; color: inherit;
       background: var(--card); border-radius: 16px; padding: 16px 18px;
-      margin-bottom: 10px; border: 1px solid transparent;
+      margin-bottom: 10px; border: 1px solid rgba(255,255,255,.04);
+      transition: border-color .15s ease;
     }
-    .card:active { border-color: var(--accent); }
+    .card:hover, .card:active { border-color: var(--accent); }
     .chip {
       display: inline-block; background: var(--chip); color: #fff;
       font-size: .68rem; font-weight: 700; letter-spacing: .04em;
@@ -82,6 +98,7 @@
     }
     .card h2 { font-size: 1.12rem; margin: 0 0 4px; }
     .meta { color: var(--muted); font-size: .9rem; margin: 2px 0; }
+    .chev { float: right; color: var(--muted); font-size: 1.1rem; margin-top: -2px; }
 
     .btn {
       display: block; width: 100%; text-align: center; border: none;
@@ -93,34 +110,39 @@
 
     .empty, .loading, .err {
       text-align: center; color: var(--muted); padding: 36px 12px; font-size: .95rem;
+      line-height: 1.45;
     }
     .err { color: var(--danger); }
+    .err a { color: var(--accent); }
   </style>
   <script src="../e/firebase-config.js"></script>
 </head>
 <body>
   <div class="wrap">
-    <!-- No logueado: solo login -->
     <section id="gate" class="gate" hidden>
-      <img class="brand" src="../logo-fixturego.jpg" alt=""
+      <img class="brand" src="../logo-fixturego.jpg" alt="FixtureGo"
            onerror="this.style.display='none'" />
       <h1>FixtureGo</h1>
       <p>Entrá con Google para ver eventos abiertos e inscribirte en un clic.</p>
       <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
-      <p class="hint" id="gateHint">Quedás logueado en este navegador.</p>
+      <p class="hint" id="gateHint">Por ahora el acceso es solo con Google. Quedás logueado en este navegador.</p>
       <p class="err" id="gateErr" hidden></p>
     </section>
 
-    <!-- Logueado -->
     <section id="app" hidden>
-      <header class="top">
-        <div>
-          <h1>Eventos</h1>
+      <div class="profile">
+        <div class="avatar" id="avatar">G</div>
+        <div class="who">
           <p class="hello" id="hello">¡Hola!</p>
           <p class="email" id="emailLine"></p>
         </div>
-        <button type="button" class="linkish" id="signOutBtn">Salir</button>
-      </header>
+        <div class="actions">
+          <button type="button" class="linkish" id="switchBtn">Cambiar cuenta</button>
+          <button type="button" class="linkish" id="signOutBtn">Salir</button>
+        </div>
+      </div>
+
+      <h2 class="page-title">Eventos</h2>
 
       <div class="tabs">
         <button type="button" class="tab active" id="tabOpen">Abiertos</button>
@@ -128,7 +150,6 @@
       </div>
 
       <div id="list" class="loading">Cargando…</div>
-      <p class="err" id="listErr" hidden></p>
     </section>
   </div>
 
@@ -150,7 +171,6 @@
     const appEl = document.getElementById("app");
     const listEl = document.getElementById("list");
     const gateErr = document.getElementById("gateErr");
-    const listErr = document.getElementById("listErr");
     const googleBtn = document.getElementById("googleBtn");
 
     let tab = "open";
@@ -163,9 +183,21 @@
       return !!(u && !u.isAnonymous && u.providerData &&
         u.providerData.some((p) => p.providerId === "google.com"));
     }
-    function firstName(u) {
-      const n = ((u && u.displayName) || "").trim().split(/\s+/)[0];
-      return n || "jugador";
+    /** Nombre visible: displayName → parte del email → Jugador */
+    function niceName(u) {
+      const dn = ((u && u.displayName) || "").trim();
+      if (dn) return dn;
+      const local = ((u && u.email) || "").split("@")[0];
+      return local || "Jugador";
+    }
+    function greetName(u) {
+      const dn = ((u && u.displayName) || "").trim();
+      if (dn) return dn.split(/\s+/)[0];
+      const local = ((u && u.email) || "").split("@")[0];
+      return local || "jugador";
+    }
+    function initial(u) {
+      return greetName(u).charAt(0).toUpperCase() || "F";
     }
     function mobile() {
       return /Android|iPhone|iPad|iPod|Mobile|Instagram|FBAN|FBAV|WhatsApp/i.test(
@@ -195,8 +227,9 @@
     function showApp(u) {
       gate.hidden = true;
       appEl.hidden = false;
-      document.getElementById("hello").textContent = "¡Hola, " + firstName(u) + "!";
+      document.getElementById("hello").textContent = "¡Hola, " + greetName(u) + "!";
       document.getElementById("emailLine").textContent = u.email || "";
+      document.getElementById("avatar").textContent = initial(u);
     }
 
     async function finishRedirect() {
@@ -215,9 +248,14 @@
       }
     }
 
-    async function loginGoogle() {
+    async function loginGoogle(pickAccount) {
       googleBtn.disabled = true;
       document.getElementById("gateHint").textContent = "Abriendo Google…";
+      if (pickAccount) {
+        provider.setCustomParameters({ prompt: "select_account" });
+      } else {
+        provider.setCustomParameters({});
+      }
       try {
         if (mobile()) {
           await signInWithRedirect(auth, provider);
@@ -243,7 +281,7 @@
       } finally {
         googleBtn.disabled = false;
         document.getElementById("gateHint").textContent =
-          "Quedás logueado en este navegador.";
+          "Por ahora el acceso es solo con Google. Quedás logueado en este navegador.";
       }
     }
 
@@ -254,6 +292,7 @@
       const type = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
       const spots = (ev.joinedCount || 0) + " / " + (ev.capacity || 0) + " plazas";
       a.innerHTML =
+        '<span class="chev">›</span>' +
         (badge ? '<span class="badge">' + badge + "</span>" : "") +
         '<span class="chip">' + type + "</span>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
@@ -296,8 +335,12 @@
       return items;
     }
 
+    function indexLinkFromError(msg) {
+      const m = String(msg || "").match(/https:\/\/console\.firebase\.google\.com[^\s)"]+/);
+      return m ? m[0] : null;
+    }
+
     async function refresh() {
-      listErr.hidden = true;
       listEl.className = "loading";
       listEl.textContent = "Cargando…";
       try {
@@ -325,10 +368,15 @@
         }
       } catch (e) {
         console.error(e);
+        const link = indexLinkFromError(e && e.message);
         listEl.className = "err";
-        listEl.textContent = e.message || "Error al cargar.";
-        if (/index/i.test(String(e.message))) {
-          listEl.textContent += " Abrí el link del índice en la consola del navegador.";
+        if (link) {
+          listEl.innerHTML =
+            "Falta un índice de Firestore para “Mis inscripciones”.<br><br>" +
+            '<a href="' + link + '" target="_blank" rel="noopener">Crear índice en Firebase</a>' +
+            "<br><br>Cuando diga Enabled, recargá esta página.";
+        } else {
+          listEl.textContent = (e && e.message) || "Error al cargar.";
         }
       }
     }
@@ -340,10 +388,15 @@
       refresh();
     }
 
-    googleBtn.addEventListener("click", loginGoogle);
+    googleBtn.addEventListener("click", () => loginGoogle(false));
     document.getElementById("signOutBtn").addEventListener("click", async () => {
       await signOut(auth);
       showGate("");
+    });
+    document.getElementById("switchBtn").addEventListener("click", async () => {
+      await signOut(auth);
+      showGate("");
+      await loginGoogle(true);
     });
     document.getElementById("tabOpen").addEventListener("click", () => setTab("open"));
     document.getElementById("tabMine").addEventListener("click", () => setTab("mine"));
