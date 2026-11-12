@@ -315,25 +315,25 @@
       : "https://fixturego.com/";
     const playStore =
       "https://play.google.com/store/apps/details?id=com.gopadel.americano";
+    const ua = navigator.userAgent || "";
+    const isAndroid = /Android/i.test(ua);
 
     const openApp = document.getElementById("openApp");
-    openApp.href = deepHttps;
+    // La app hoy es Android. En iPhone/PC el botón lleva a Play Store.
+    openApp.href = isAndroid && eventId ? deepHttps : playStore;
+    openApp.target = isAndroid ? "_self" : "_blank";
+    openApp.rel = "noopener";
+    openApp.textContent = isAndroid
+      ? "Abrir en la app"
+      : "Descargar app (Android)";
     openApp.addEventListener("click", (e) => {
+      if (!isAndroid || !eventId) return; // href → Play Store
       e.preventDefault();
-      const ua = navigator.userAgent || "";
-      if (/Android/i.test(ua) && eventId) {
-        window.location.href =
-          "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
-          "#Intent;scheme=https;package=com.gopadel.americano;" +
-          "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
-        return;
-      }
-      if (/iPhone|iPad|iPod/i.test(ua)) {
-        window.location.href = deepHttps;
-        setTimeout(() => { window.location.href = playStore; }, 1500);
-        return;
-      }
-      window.open(deepHttps, "_blank");
+      // Intent: abre la app si está instalada; si no, Play Store.
+      window.location.href =
+        "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
+        "#Intent;scheme=https;package=com.gopadel.americano;" +
+        "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
     });
 
     if (!eventId) {
@@ -394,21 +394,25 @@
       return pos === 1 ? "🥇" : pos === 2 ? "🥈" : pos === 3 ? "🥉" : "#" + pos;
     }
 
+    function syncShareVisibility(s) {
+      const shareBtn = document.getElementById("shareBtn");
+      const open = s && s.status === "open";
+      shareBtn.hidden = !open;
+      shareBtn.textContent = "Compartir por WhatsApp";
+    }
+
     function fillFinishedBox(s) {
       const box = document.getElementById("finishedBox");
       const meta = document.getElementById("finishedMeta");
       const podium = document.getElementById("podium");
       const resultBtn = document.getElementById("resultBtn");
-      const shareBtn = document.getElementById("shareBtn");
       const closed = s && s.status !== "open";
+      syncShareVisibility(s);
       if (!closed) {
         box.hidden = true;
-        shareBtn.hidden = false;
-        shareBtn.textContent = "Compartir por WhatsApp";
         return;
       }
       box.hidden = false;
-      shareBtn.hidden = true;
       const bits = [];
       if (s.serieNombre) {
         bits.push(
@@ -437,8 +441,6 @@
         }
         resultBtn.hidden = false;
         resultBtn.href = "../r/?id=" + encodeURIComponent(resultState.id);
-        shareBtn.hidden = false;
-        shareBtn.textContent = "Compartir resultado";
         bits.push("Clasificación disponible");
       } else {
         document.getElementById("finishedLabel").textContent = "Evento finalizado";
@@ -631,13 +633,12 @@
       }
 
       if (myStatus) {
+        const nick = (window.__mineDisplayName || "").trim();
         actionTitle.textContent =
           myStatus === "waitlist" ? "Estás en lista de espera" : "Ya estás inscrito";
-        actionSub.textContent =
-          "Cuenta: " + (u.email || "") + ". Podés cambiar cómo aparecés en la lista.";
-        nickWrap.hidden = false;
-        fillNickDefault(u, window.__mineDisplayName || "");
-        saveNickBtn.hidden = false;
+        actionSub.textContent = nick
+          ? "En la lista: " + nick
+          : "Cuenta: " + (u.email || "");
         leaveBtn.hidden = false;
         return;
       }
@@ -956,20 +957,14 @@
     leaveBtn.addEventListener("click", leaveEvent);
     saveNickBtn.addEventListener("click", saveNickOnList);
     document.getElementById("shareBtn").addEventListener("click", () => {
-      const title = (eventState && eventState.title) || "Evento FixtureGo";
-      const whenTxt = eventState && eventState.startsAt
+      if (!eventState || eventState.status !== "open") return;
+      const title = eventState.title || "Evento FixtureGo";
+      const whenTxt = eventState.startsAt
         ? new Date(eventState.startsAt).toLocaleString("es", {
             weekday: "short", day: "numeric", month: "short",
             hour: "2-digit", minute: "2-digit",
           })
         : "";
-      if (resultState) {
-        const url = "https://fixturego.com/r/?id=" + encodeURIComponent(resultState.id);
-        const text = "Resultado de " + title + (whenTxt ? " (" + whenTxt + ")" : "") +
-          " en FixtureGo\n" + url;
-        window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
-        return;
-      }
       const url = "https://fixturego.com/e/?id=" + encodeURIComponent(eventId);
       const text = "¡Sumate a " + title + (whenTxt ? " (" + whenTxt + ")" : "") +
         " en FixtureGo!\n" + url;
