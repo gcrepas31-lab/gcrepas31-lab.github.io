@@ -299,6 +299,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       niceName, greetName, initial, applySavedTheme, setStoredName, getStoredName,
+      loadRemoteProfile, saveRemoteProfile,
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
 
@@ -373,7 +374,7 @@
         nickInput.value = currentListName;
         return;
       }
-      nickInput.value = getStoredName() || niceName(u);
+      nickInput.value = getStoredName(u && u.email) || niceName(u);
     }
 
     function isGoogle(u) {
@@ -795,7 +796,7 @@
       busy = true;
       primaryBtn.disabled = true;
       try {
-        setStoredName(name);
+        await saveRemoteProfile(db, u, name, { setDoc, doc }).catch(() => setStoredName(name, u.email));
         const fresh = await loadEvent(eventId);
         if (!fresh || fresh.status !== "open") throw new Error("Inscripción cerrada");
         const signups = await loadSignups();
@@ -863,7 +864,7 @@
       busy = true;
       saveNickBtn.disabled = true;
       try {
-        setStoredName(name);
+        await saveRemoteProfile(db, u, name, { setDoc, doc }).catch(() => setStoredName(name, u.email));
         const email = myEmail;
         await updateDoc(doc(db, "open_events", eventId, "signups", signupUid), {
           uid: signupUid,
@@ -1006,7 +1007,14 @@
         document.getElementById("err").textContent = e.message || "Error al cargar.";
       }
 
-      onAuthStateChanged(auth, async () => {
+      onAuthStateChanged(auth, async (u) => {
+        if (isGoogle(u) && db) {
+          try {
+            await loadRemoteProfile(db, u, { getDoc, doc });
+          } catch (e) {
+            console.warn("profile", e);
+          }
+        }
         if (eventState) await refreshMineAndRoster();
         else renderAction();
       });

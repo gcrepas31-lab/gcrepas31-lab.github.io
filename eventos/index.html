@@ -297,11 +297,12 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, collection, query, where, orderBy, getDocs, getDoc, doc,
-      collectionGroup, deleteDoc, updateDoc,
+      collectionGroup, deleteDoc, updateDoc, setDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       niceName, greetName, initial, getStoredName, setStoredName,
       applySavedTheme, setTheme, getTheme,
+      loadRemoteProfile, saveRemoteProfile,
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
 
@@ -391,6 +392,16 @@
       document.getElementById("datosEmail").textContent = "Cuenta: " + (u.email || "—");
       document.getElementById("themeSelect").value = getTheme();
       renderNickDatosUI();
+    }
+
+    async function syncProfileForUser(u) {
+      if (!u || !db) return;
+      try {
+        await loadRemoteProfile(db, u, { getDoc, doc });
+      } catch (e) {
+        console.warn("syncProfile", e);
+      }
+      showApp(u);
     }
 
     async function finishRedirect() {
@@ -485,6 +496,9 @@
       const a = document.createElement("a");
       a.className = "card-link";
       a.href = "../e/?id=" + encodeURIComponent(ev.id);
+      const ownerBadge = opts.ownerBadge
+        ? '<span class="chip soft">' + escapeHtml(opts.ownerBadge) + "</span>"
+        : "";
       a.innerHTML =
         '<div class="chip-row">' +
           '<span class="chip">' + type + "</span>" +
@@ -497,7 +511,10 @@
         (liga ? '<p class="title-sub">' + escapeHtml(liga) + "</p>" : "") +
         '<p class="meta">' + when(ev.startsAtEpochMs) + "</p>" +
         (place ? '<p class="meta">' + escapeHtml(place) + "</p>" : "") +
-        '<span class="spots ' + (full ? "full" : "open") + '">' + escapeHtml(spotsTxt) + "</span>" +
+        '<div class="chip-row" style="margin-top:10px;justify-content:space-between">' +
+          '<span class="spots ' + (full ? "full" : "open") + '">' + escapeHtml(spotsTxt) + "</span>" +
+          ownerBadge +
+        "</div>" +
         (alerts ? "<div>" + alerts + "</div>" : "");
       wrap.appendChild(a);
       if (opts.canLeave) {
@@ -539,7 +556,8 @@
     }
 
     function renderNickDatosUI() {
-      const saved = (getStoredName() || "").trim();
+      const u = auth && auth.currentUser;
+      const saved = (getStoredName(u && u.email) || "").trim();
       const savedBox = document.getElementById("nickSavedBox");
       const editWrap = document.getElementById("nickEditWrap");
       const input = document.getElementById("nameInput");
@@ -551,7 +569,7 @@
       } else {
         savedBox.hidden = true;
         editWrap.hidden = false;
-        input.value = auth.currentUser ? niceName(auth.currentUser) : "";
+        input.value = u ? niceName(u) : "";
       }
     }
 
@@ -618,15 +636,20 @@
     }
 
     async function loadMine(uid) {
+      if (!uid) return [];
       const q = query(collectionGroup(db, "signups"), where("uid", "==", uid));
       const snap = await getDocs(q);
       const items = [];
       for (const d of snap.docs) {
         const er = d.ref.parent.parent;
         if (!er) continue;
-        const ev = await getDoc(er);
-        if (!ev.exists()) continue;
-        items.push({ id: ev.id, ...ev.data(), _st: d.data().status });
+        try {
+          const ev = await getDoc(er);
+          if (!ev.exists()) continue;
+          items.push({ id: ev.id, ...ev.data(), _st: d.data().status });
+        } catch (e) {
+          console.warn("loadMine parent", er.id, e);
+        }
       }
       items.sort((a, b) => (a.startsAtEpochMs || 0) - (b.startsAtEpochMs || 0));
       return items;
@@ -747,11 +770,15 @@
         listEl.className = "";
         listEl.innerHTML = "";
         if (tab === "open") {
-          const [list, leagueMap, joinedIds] = await Promise.all([
-            loadOpen(),
-            loadLeagueNameMap(),
-            myOpenSignupIds(auth.currentUser.uid),
-          ]);
+          // Abiertos no debe caerse si falla “mis inscritos” / ligas
+          const list = await loadOpen();
+          const leagueMap = await loadLeagueNameMap().catch(() => ({}));
+          let joinedIds = new Set();
+          try {
+            joinedIds = await myOpenSignupIds(auth.currentUser && auth.currentUser.uid);
+          } catch (e) {
+            console.warn("joinedIds", e);
+          }
           if (!list.length) {
             listEl.className = "empty";
             listEl.textContent = "No hay eventos abiertos por ahora.";
@@ -759,10 +786,12 @@
           }
           list.forEach((ev) => {
             const joined = joinedIds.has(ev.id);
+            const isOwner = !!(auth.currentUser && ev.ownerUid === auth.currentUser.uid);
             listEl.appendChild(eventCard(ev, {
               leagueMap,
               joined,
               badge: joined ? "Inscripto" : "",
+              ownerBadge: isOwner ? "Creador" : "",
             }));
           });
         } else if (tab === "mine") {
@@ -836,20 +865,26 @@
 
     async function saveDatos() {
       const u = auth.currentUser;
-      const name = setStoredName(document.getElementById("nameInput").value);
-      if (!name) {
+      const raw = document.getElementById("nameInput").value;
+      if (!String(raw || "").trim()) {
         toast("Poné un nombre");
         return;
       }
       try {
-        if (u) await updateProfile(u, { displayName: name });
+        const name = await saveRemoteProfile(db, u, raw, { setDoc, doc });
+        try {
+          if (u) await updateProfile(u, { displayName: name });
+        } catch (e) {
+          console.warn(e);
+        }
+        setTheme(document.getElementById("themeSelect").value);
+        showApp(auth.currentUser);
+        renderNickDatosUI();
+        toast("Nick guardado");
       } catch (e) {
-        console.warn(e);
+        console.error(e);
+        toast(e.message || "No se pudo guardar el nick");
       }
-      setTheme(document.getElementById("themeSelect").value);
-      showApp(auth.currentUser);
-      renderNickDatosUI();
-      toast("Nick guardado");
     }
 
     googleBtn.addEventListener("click", () => loginGoogle());
@@ -872,7 +907,8 @@
       document.getElementById("nickSavedBox").hidden = true;
       document.getElementById("nickEditWrap").hidden = false;
       const input = document.getElementById("nameInput");
-      input.value = getStoredName() || "";
+      const u = auth && auth.currentUser;
+      input.value = getStoredName(u && u.email) || niceName(u) || "";
       input.focus();
       input.select();
     });
@@ -895,7 +931,7 @@
       await finishRedirect();
       onAuthStateChanged(auth, async (u) => {
         if (isGoogle(u)) {
-          showApp(u);
+          await syncProfileForUser(u);
           if (!booted) {
             booted = true;
             setTab(tab);
