@@ -388,7 +388,7 @@
       const type = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
       const left = spotsLeft(ev);
       const spots = (ev.joinedCount || 0) + " / " + (ev.capacity || 0) + " plazas";
-      const alerts = alertBits(ev).map((t) =>
+      const alerts = (ev.status === "closed" ? [] : alertBits(ev)).map((t) =>
         '<span class="alert">' + escapeHtml(t) + "</span>"
       ).join(" ");
       const a = document.createElement("a");
