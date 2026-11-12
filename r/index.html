@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resultado · FixtureGo</title>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #0b1f2e; --bg2: #1a4a6e; --card: #123049; --text: #f4f7fb;
+      --muted: #9fb3c8; --accent: #7ed957; --line: #2a5070; --gold: #f5d76e;
+      --chip: #1e4d7a; --table: #0e2a40;
+    }
+    [data-theme="light"] {
+      --bg: #eef5fa; --bg2: #cfe0ee; --card: #fff; --text: #0b1f2e;
+      --muted: #5a7288; --accent: #2f9e44; --line: #d0dde8; --gold: #c9a227;
+      --chip: #1e4d7a; --table: #f3f7fb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1100px 520px at 15% -15%, var(--bg2), var(--bg));
+      padding: 18px 14px 48px;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    a { color: var(--accent); font-weight: 700; text-decoration: none; }
+    .nav { margin-bottom: 14px; }
+    .card {
+      background: var(--card); border-radius: 18px; overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,.28); padding: 18px 16px 22px;
+    }
+    .chip {
+      display: inline-block; background: var(--chip); color: #fff;
+      font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    }
+    h1 { margin: 10px 0 6px; font-size: 1.35rem; font-weight: 800; }
+    .meta { color: var(--muted); font-size: .9rem; margin: 3px 0; line-height: 1.4; }
+    h2 { margin: 22px 0 10px; font-size: 1.05rem; font-weight: 800; }
+    .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; background: var(--table); }
+    th, td { padding: 8px 7px; text-align: left; white-space: nowrap; }
+    th { color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--line); }
+    tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+    tr.top td { background: rgba(245, 215, 110, .14); }
+    .medal { margin-right: 4px; }
+    details {
+      margin: 8px 0; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--table); overflow: hidden;
+    }
+    summary {
+      padding: 12px 14px; cursor: pointer; font-weight: 700; list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    .match {
+      padding: 8px 14px 10px; border-top: 1px solid var(--line);
+      font-size: .86rem; color: var(--muted); line-height: 1.45;
+    }
+    .score { color: var(--text); font-weight: 700; }
+    .loading, .err { text-align: center; color: var(--muted); padding: 40px 12px; }
+    .err { color: #ffb4a8; }
+    .foot { margin-top: 16px; text-align: center; color: var(--muted); font-size: .78rem; }
+  </style>
+  <script src="../e/firebase-config.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav"><a href="../eventos/#jugados">← Jugados</a></div>
+    <div id="loading" class="loading">Cargando resultado…</div>
+    <p id="err" class="err" hidden>No encontramos este resultado.</p>
+    <div id="card" class="card" hidden></div>
+  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { applySavedTheme } from "../js/profile.js";
+
+    applySavedTheme();
+    const id = new URLSearchParams(location.search).get("id");
+    const cfg = window.FIXTUREGO_FIREBASE;
+    const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";
+
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
+    function when(ms) {
+      if (!ms) return "—";
+      return new Date(ms).toLocaleString("es", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+    }
+    function medal(pos) {
+      return pos === 1 ? "🥇" : pos === 2 ? "🥈" : pos === 3 ? "🥉" : "";
+    }
+
+    if (!id || !ready) {
+      document.getElementById("loading").hidden = true;
+      document.getElementById("err").hidden = false;
+    } else {
+      const app = initializeApp(cfg);
+      const db = getFirestore(app);
+      const snap = await getDoc(doc(db, "event_results", id));
+      document.getElementById("loading").hidden = true;
+      if (!snap.exists()) {
+        document.getElementById("err").hidden = false;
+      } else {
+        const d = snap.data();
+        const card = document.getElementById("card");
+        card.hidden = false;
+        const ranking = Array.isArray(d.ranking) ? d.ranking : [];
+        const rounds = Array.isArray(d.rounds) ? d.rounds : [];
+        let rows = ranking.map((r) => {
+          const pos = r.pos || 0;
+          return `<tr class="${pos <= 3 ? "top" : ""}">
+            <td>${pos}</td>
+            <td><span class="medal">${medal(pos)}</span>${esc(r.nombre)}</td>
+            <td>${r.pj ?? "—"}</td>
+            <td>${r.g ?? "—"}</td>
+            <td>${r.e ?? "—"}</td>
+            <td>${r.p ?? "—"}</td>
+            <td>${r.pf ?? "—"}</td>
+            <td>${r.pc ?? "—"}</td>
+            <td>${r.dif ?? "—"}</td>
+            <td><strong>${r.pts ?? "—"}</strong></td>
+          </tr>`;
+        }).join("");
+
+        let roundsHtml = rounds.map((rd) => {
+          const matches = (rd.partidos || []).map((p) =>
+            `<div class="match">Pista ${esc(p.pista)} ·
+              ${esc((p.equipo1 || []).join(" - "))}
+              <span class="score"> ${esc(p.puntos1)} - ${esc(p.puntos2)} </span>
+              ${esc((p.equipo2 || []).join(" - "))}</div>`
+          ).join("");
+          return `<details><summary>Ronda ${esc(rd.ronda)}</summary>${matches}</details>`;
+        }).join("");
+
+        card.innerHTML =
+          `<span class="chip">RESULTADO</span>` +
+          `<h1>${esc(d.title || "Evento")}</h1>` +
+          (d.serieNombre ? `<p class="meta">${esc(d.serieNombre)}${d.jornada ? " · Jornada " + esc(d.jornada) : ""}</p>` : "") +
+          `<p class="meta">${when(d.fechaEpochMs)}</p>` +
+          `<p class="meta">${esc(d.tipoFixture || "")} · ${esc(d.jugadoresCount || ranking.length)} jugadores</p>` +
+          `<h2>Clasificación final</h2>` +
+          `<div class="table-wrap"><table><thead><tr>
+            <th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
+            <th>PF</th><th>PC</th><th>DIF</th><th>Pts</th>
+          </tr></thead><tbody>${rows}</tbody></table></div>` +
+          (roundsHtml ? `<h2>Resultados por rondas</h2>${roundsHtml}` : "") +
+          `<p class="foot">FixtureGo · mismo contenido que el share</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

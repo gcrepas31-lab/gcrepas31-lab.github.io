@@ -515,6 +515,51 @@
         .sort((a, b) => (b.startsAtEpochMs || 0) - (a.startsAtEpochMs || 0));
     }
 
+    /** Resultados publicados al guardar/compartir en la app. */
+    async function loadMyResults(email) {
+      if (!email) return [];
+      const q = query(
+        collection(db, "event_results"),
+        where("participantEmails", "array-contains", email),
+      );
+      const snap = await getDocs(q);
+      const list = [];
+      snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+      list.sort((a, b) => (b.fechaEpochMs || 0) - (a.fechaEpochMs || 0));
+      return list;
+    }
+
+    function resultCard(ev) {
+      const wrap = document.createElement("div");
+      wrap.className = "card-wrap";
+      const a = document.createElement("a");
+      a.className = "card-link";
+      a.href = "../r/?id=" + encodeURIComponent(ev.id);
+      const whenTxt = ev.fechaEpochMs
+        ? new Date(ev.fechaEpochMs).toLocaleString("es", {
+            weekday: "short", day: "numeric", month: "short",
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "";
+      const top = Array.isArray(ev.ranking) && ev.ranking[0]
+        ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
+        : "";
+      a.innerHTML =
+        '<span class="badge">Resultado</span>' +
+        '<span class="chip">' +
+          (ev.serieNombre ? "LIGA" : "EVENTO") +
+        "</span>" +
+        "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
+        (whenTxt ? '<p class="meta">' + whenTxt + "</p>" : "") +
+        (ev.serieNombre
+          ? '<p class="meta">' + escapeHtml(ev.serieNombre) +
+            (ev.jornada ? " · Jornada " + escapeHtml(ev.jornada) : "") + "</p>"
+          : "") +
+        (top ? '<p class="meta">' + top + "</p>" : "");
+      wrap.appendChild(a);
+      return wrap;
+    }
+
     function indexLinkFromError(msg) {
       const m = String(msg || "").match(/https:\/\/console\.firebase\.google\.com[^\s)"]+/);
       return m ? m[0] : null;
@@ -553,15 +598,20 @@
             listEl.appendChild(eventCard(ev, { badge, canLeave: true }));
           });
         } else if (tab === "played") {
-          const items = minePlayed(await loadMine(auth.currentUser.uid));
-          if (!items.length) {
+          const email = (auth.currentUser.email || "").trim().toLowerCase();
+          const results = email ? await loadMyResults(email) : [];
+          const closedSignups = minePlayed(await loadMine(auth.currentUser.uid));
+          if (!results.length && !closedSignups.length) {
             listEl.className = "empty";
             listEl.textContent =
-              "Cuando un organizador inicie el evento en la app, aparecerá acá.";
+              "Cuando se guarde/comparta un evento en la app (con tu email en el jugador), aparecerá acá.";
             return;
           }
-          items.forEach((ev) => {
-            listEl.appendChild(eventCard(ev, { badge: "Jugado", canLeave: false }));
+          results.forEach((ev) => listEl.appendChild(resultCard(ev)));
+          closedSignups.forEach((ev) => {
+            // Evitar duplicar si ya hay event_results del mismo open event / título reciente
+            if (results.some((r) => r.title === ev.title)) return;
+            listEl.appendChild(eventCard(ev, { badge: "Cerrado", canLeave: false }));
           });
         }
       } catch (e) {
