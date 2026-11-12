@@ -86,12 +86,17 @@
     }
     .card-head {
       background: #0e2a40; padding: 14px 16px;
-      display: flex; align-items: center; gap: 10px;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
     }
     .chip {
       background: var(--chip); color: #fff; font-size: .7rem; font-weight: 700;
       letter-spacing: .04em; padding: 3px 9px; border-radius: 999px;
     }
+    .chip.soft {
+      background: transparent; color: var(--muted); border: 1px solid var(--line);
+      font-weight: 650; letter-spacing: 0;
+    }
+    .card-head .brand { margin-left: auto; font-weight: 700; font-size: .9rem; }
     .body { padding: 20px 18px 24px; }
     .title { font-size: 1.45rem; font-weight: 800; margin: 4px 0 10px; letter-spacing: -.01em; }
     .meta { color: var(--muted); font-size: .92rem; margin: 4px 0; line-height: 1.45; }
@@ -222,12 +227,12 @@
     <div class="card" id="card" hidden>
       <div class="card-head">
         <span class="chip" id="typeChip">EVENTO</span>
-        <strong>FixtureGo</strong>
+        <span class="chip soft" id="modalityChip" hidden></span>
+        <strong class="brand">FixtureGo</strong>
       </div>
       <div class="body">
         <p class="meta" id="when">—</p>
         <h1 class="title" id="title">Evento</h1>
-        <p class="meta" id="modality"></p>
         <p class="meta" id="zone"></p>
         <p class="meta" id="venue"></p>
         <p class="meta" id="spots"></p>
@@ -471,11 +476,14 @@
         custom: "Personalizada",
         ladder: "Escalera",
       };
-      const mod = document.getElementById("modality");
+      const modChip = document.getElementById("modalityChip");
       if (s.type === "americana" && s.modality) {
-        mod.hidden = false;
-        mod.textContent = map[s.modality] || s.modality;
-      } else mod.hidden = true;
+        modChip.hidden = false;
+        modChip.textContent = map[s.modality] || String(s.modality).replace(/_/g, " ");
+      } else {
+        modChip.hidden = true;
+        modChip.textContent = "";
+      }
       const zone = document.getElementById("zone");
       const venue = document.getElementById("venue");
       const club = (s.venue || "").trim();
