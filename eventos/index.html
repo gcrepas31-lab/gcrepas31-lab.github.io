@@ -491,7 +491,7 @@
           (mod ? '<span class="chip soft">' + escapeHtml(mod) + "</span>" : "") +
           (opts.badge ? '<span class="badge">' + escapeHtml(opts.badge) + "</span>" : "") +
           (opts.joined === true && !opts.badge
-            ? '<span class="badge">Inscrito</span>' : "") +
+            ? '<span class="badge">Inscripto</span>' : "") +
         "</div>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
         (liga ? '<p class="title-sub">' + escapeHtml(liga) + "</p>" : "") +
@@ -762,7 +762,7 @@
             listEl.appendChild(eventCard(ev, {
               leagueMap,
               joined,
-              badge: joined ? "Inscrito" : "",
+              badge: joined ? "Inscripto" : "",
             }));
           });
         } else if (tab === "mine") {
@@ -776,7 +776,7 @@
             return;
           }
           items.forEach((ev) => {
-            const badge = ev._st === "waitlist" ? "Reserva" : "Inscrito";
+            const badge = ev._st === "waitlist" ? "Reserva" : "Inscripto";
             listEl.appendChild(eventCard(ev, { badge, canLeave: true, leagueMap }));
           });
         } else if (tab === "played") {

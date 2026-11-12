@@ -249,7 +249,7 @@
 
         <div class="roster" id="rosterBox" hidden>
           <div class="roster-head">
-            <h3 id="rosterTitle">Inscritos</h3>
+            <h3 id="rosterTitle">Inscriptos</h3>
             <span class="roster-count" id="rosterCount"></span>
           </div>
           <ul id="rosterList"></ul>
@@ -541,7 +541,7 @@
         }
       }
       alerts.innerHTML = bits.map((t) => '<span class="alert">' + t + "</span>").join("");
-      document.getElementById("rosterTitle").textContent = closed ? "Jugaron" : "Inscritos";
+      document.getElementById("rosterTitle").textContent = closed ? "Jugaron" : "Inscriptos";
       fillFinishedBox(s);
     }
 
@@ -643,7 +643,7 @@
       if (myStatus) {
         const nick = (window.__mineDisplayName || "").trim();
         actionTitle.textContent =
-          myStatus === "waitlist" ? "Estás en lista de espera" : "Ya estás inscrito";
+          myStatus === "waitlist" ? "Estás en lista de espera" : "Ya estás inscripto";
         actionSub.textContent = nick
           ? "En la lista: " + nick
           : "Cuenta: " + (u.email || "");
@@ -831,7 +831,7 @@
         window.__mineUid = u.uid;
         window.__mineDisplayName = name;
         await refreshMineAndRoster();
-        showMsg(status === "waitlist" ? "Quedaste en reserva." : "¡Listo, estás inscrito!", false);
+        showMsg(status === "waitlist" ? "Quedaste en reserva." : "¡Listo, estás inscripto!", false);
       } catch (e) {
         console.error(e);
         showMsg(e.message || "No se pudo inscribir.", true);
