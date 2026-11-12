@@ -99,9 +99,9 @@
       background: rgba(0,0,0,.12); border-radius: 999px; padding: 4px;
     }
     .tab {
-      flex: 1; padding: 10px 6px; border: none; border-radius: 999px;
+      flex: 1; padding: 10px 4px; border: none; border-radius: 999px;
       background: transparent; color: var(--muted); font-weight: 700;
-      cursor: pointer; font-size: .82rem;
+      cursor: pointer; font-size: .72rem;
     }
     .tab.active { background: var(--accent); color: var(--on-accent); }
 
@@ -211,6 +211,7 @@
       <div class="tabs">
         <button type="button" class="tab active" id="tabOpen">Abiertos</button>
         <button type="button" class="tab" id="tabMine">Mis insc.</button>
+        <button type="button" class="tab" id="tabPlayed">Jugados</button>
         <button type="button" class="tab" id="tabDatos">Mis datos</button>
       </div>
 
@@ -265,7 +266,11 @@
     const gateErr = document.getElementById("gateErr");
     const googleBtn = document.getElementById("googleBtn");
 
-    let tab = location.hash === "#datos" ? "datos" : "open";
+    let tab = location.hash === "#datos"
+      ? "datos"
+      : location.hash === "#jugados"
+        ? "played"
+        : "open";
     let auth = null;
     let db = null;
     let booted = false;
@@ -498,6 +503,18 @@
       return items;
     }
 
+    /** Inscripciones activas (evento todavía open). */
+    function mineOpen(items) {
+      return items.filter((ev) => (ev.status || "open") === "open");
+    }
+
+    /** Ya jugados / lista cerrada al iniciar (status closed). */
+    function minePlayed(items) {
+      return items
+        .filter((ev) => (ev.status || "") === "closed")
+        .sort((a, b) => (b.startsAtEpochMs || 0) - (a.startsAtEpochMs || 0));
+    }
+
     function indexLinkFromError(msg) {
       const m = String(msg || "").match(/https:\/\/console\.firebase\.google\.com[^\s)"]+/);
       return m ? m[0] : null;
@@ -524,16 +541,27 @@
             return;
           }
           list.forEach((ev) => listEl.appendChild(eventCard(ev)));
-        } else {
-          const items = await loadMine(auth.currentUser.uid);
+        } else if (tab === "mine") {
+          const items = mineOpen(await loadMine(auth.currentUser.uid));
           if (!items.length) {
             listEl.className = "empty";
-            listEl.textContent = "Todavía no te anotaste a ningún evento.";
+            listEl.textContent = "No tenés inscripciones abiertas.";
             return;
           }
           items.forEach((ev) => {
             const badge = ev._st === "waitlist" ? "Reserva" : "Inscrito";
             listEl.appendChild(eventCard(ev, { badge, canLeave: true }));
+          });
+        } else if (tab === "played") {
+          const items = minePlayed(await loadMine(auth.currentUser.uid));
+          if (!items.length) {
+            listEl.className = "empty";
+            listEl.textContent =
+              "Cuando un organizador inicie el evento en la app, aparecerá acá.";
+            return;
+          }
+          items.forEach((ev) => {
+            listEl.appendChild(eventCard(ev, { badge: "Jugado", canLeave: false }));
           });
         }
       } catch (e) {
@@ -555,8 +583,10 @@
       tab = next;
       document.getElementById("tabOpen").classList.toggle("active", next === "open");
       document.getElementById("tabMine").classList.toggle("active", next === "mine");
+      document.getElementById("tabPlayed").classList.toggle("active", next === "played");
       document.getElementById("tabDatos").classList.toggle("active", next === "datos");
       if (next === "datos") history.replaceState(null, "", "#datos");
+      else if (next === "played") history.replaceState(null, "", "#jugados");
       else if (location.hash) history.replaceState(null, "", location.pathname);
       refresh();
     }
@@ -599,6 +629,7 @@
     });
     document.getElementById("tabOpen").addEventListener("click", () => setTab("open"));
     document.getElementById("tabMine").addEventListener("click", () => setTab("mine"));
+    document.getElementById("tabPlayed").addEventListener("click", () => setTab("played"));
     document.getElementById("tabDatos").addEventListener("click", () => setTab("datos"));
 
     if (!ready) {
