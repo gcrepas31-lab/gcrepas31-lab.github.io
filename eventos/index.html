@@ -108,23 +108,63 @@
     .card-wrap {
       background: var(--card); border-radius: 16px; padding: 14px 16px;
       margin-bottom: 10px; border: 1px solid rgba(127,127,127,.12);
+      transition: border-color .15s, box-shadow .15s, background .15s;
+    }
+    .card-wrap.joined {
+      border-color: rgba(126, 217, 87, .55);
+      box-shadow: 0 0 0 1px rgba(126, 217, 87, .2), 0 10px 28px rgba(0,0,0,.18);
+      background: linear-gradient(180deg, rgba(126,217,87,.1), var(--card) 42%);
+    }
+    .card-wrap.not-joined {
+      border-color: rgba(127,127,127,.18);
     }
     .card-link { display: block; text-decoration: none; color: inherit; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
     .chip {
       display: inline-block; background: var(--chip); color: #fff;
       font-size: .68rem; font-weight: 700; letter-spacing: .04em;
-      padding: 3px 8px; border-radius: 999px; margin-bottom: 8px;
+      padding: 3px 8px; border-radius: 999px;
+    }
+    .chip.soft {
+      background: transparent; color: var(--muted); border: 1px solid var(--line);
+      font-weight: 650; letter-spacing: 0;
     }
     .badge {
-      float: right; font-size: .72rem; color: var(--accent); font-weight: 700;
+      margin-left: auto; font-size: .72rem; color: var(--accent); font-weight: 700;
     }
-    .card-wrap h2 { font-size: 1.1rem; margin: 0 0 4px; }
+    .card-wrap h2 { font-size: 1.1rem; margin: 0 0 2px; }
+    .title-sub { color: var(--muted); font-size: .82rem; margin: 0 0 6px; font-weight: 600; }
     .meta { color: var(--muted); font-size: .9rem; margin: 2px 0; }
+    .spots {
+      display: inline-block; margin-top: 8px; font-size: .88rem; font-weight: 700;
+      padding: 5px 11px; border-radius: 999px;
+    }
+    .spots.open {
+      color: var(--accent);
+      background: rgba(126, 217, 87, .14);
+      border: 1px solid rgba(126, 217, 87, .35);
+    }
+    .spots.full {
+      color: var(--warn);
+      background: rgba(255, 210, 122, .14);
+      border: 1px solid rgba(255, 210, 122, .4);
+    }
+    [data-theme="light"] .spots.open {
+      background: rgba(47, 158, 68, .12); border-color: rgba(47, 158, 68, .3);
+    }
     .alert {
       display: inline-block; margin-top: 6px; font-size: .78rem; font-weight: 700;
       color: var(--warn); background: rgba(255,210,122,.12);
       padding: 3px 8px; border-radius: 999px;
     }
+    .nick-saved {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(126,217,87,.35);
+      background: rgba(126,217,87,.1); margin-top: 4px;
+    }
+    .nick-saved strong { font-size: 1.05rem; }
+    .nick-saved .ok { color: var(--accent); font-size: .8rem; font-weight: 700; }
+    .nick-edit-wrap[hidden] { display: none !important; }
     .card-actions { display: flex; gap: 8px; margin-top: 10px; }
     .btn-sm {
       flex: 1; border: 1px solid var(--line); background: transparent;
@@ -224,16 +264,25 @@
           Tu identidad estable es el <strong>email</strong> de Google (ligas / stats).
           El nick es solo cómo preferís aparecer en las listas.
         </p>
-        <label for="nameInput">Nick preferido</label>
-        <input id="nameInput" maxlength="79" autocomplete="nickname"
-               placeholder="Ej: Gonza" />
+        <label>Nick preferido</label>
+        <div id="nickSavedBox" class="nick-saved" hidden>
+          <div>
+            <strong id="nickSavedValue">—</strong>
+            <div class="ok">Guardado</div>
+          </div>
+          <button type="button" class="linkish" id="editNickBtn">Cambiar</button>
+        </div>
+        <div id="nickEditWrap" class="nick-edit-wrap">
+          <input id="nameInput" maxlength="79" autocomplete="nickname"
+                 placeholder="Ej: Gonza" />
+          <button type="button" class="btn" id="saveDatosBtn" style="margin-top:10px">Guardar nick</button>
+        </div>
         <label for="themeSelect">Tema</label>
         <select id="themeSelect">
           <option value="dark">Oscuro</option>
           <option value="light">Claro</option>
         </select>
         <p class="meta" id="datosEmail" style="margin-top:12px"></p>
-        <button type="button" class="btn" id="saveDatosBtn" style="margin-top:14px">Guardar</button>
         <button type="button" class="btn btn-secondary" id="switchFromDatos">Cambiar cuenta Google</button>
       </div>
     </section>
@@ -341,6 +390,7 @@
       document.getElementById("nameInput").value = niceName(u);
       document.getElementById("datosEmail").textContent = "Cuenta: " + (u.email || "—");
       document.getElementById("themeSelect").value = getTheme();
+      renderNickDatosUI();
     }
 
     async function finishRedirect() {
@@ -384,30 +434,70 @@
       }
     }
 
+    const MODALITY_LABEL = {
+      all_vs_all: "Todos vs todos",
+      pairs: "Por parejas",
+      mixed_fixed: "Mixta fija",
+      mixed_rotating: "Mixta rotativa",
+      custom: "Personalizada",
+      ladder: "Escalera",
+    };
+
+    function modalityLabel(ev) {
+      if (ev.type === "torneo") return "Torneo";
+      const key = ev.americanaModality || ev.modality || "";
+      return MODALITY_LABEL[key] || (key ? String(key).replace(/_/g, " ") : "");
+    }
+
+    function placeLine(ev) {
+      const club = (ev.venueText || "").trim();
+      const city = (ev.zone || "").trim();
+      if (club && city) return club + " · " + city;
+      return club || city || "";
+    }
+
+    function leagueLine(ev, leagueMap) {
+      const name = (ev.serieNombre || (ev.serieId && leagueMap[ev.serieId]) || "").trim();
+      const j = ev.jornada || ev.ordenEnSerie || 0;
+      if (!name && !j) return "";
+      if (name && j) return "Jornada " + j + " · " + name;
+      if (j) return "Jornada " + j;
+      return name;
+    }
+
     function eventCard(ev, opts) {
       opts = opts || {};
       const wrap = document.createElement("div");
       wrap.className = "card-wrap";
+      if (opts.joined === true) wrap.classList.add("joined");
+      else if (opts.joined === false) wrap.classList.add("not-joined");
       const type = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
+      const mod = modalityLabel(ev);
       const left = spotsLeft(ev);
-      const spots = (ev.joinedCount || 0) + " / " + (ev.capacity || 0) + " plazas";
+      const full = left <= 0;
+      const spotsTxt = (ev.joinedCount || 0) + " / " + (ev.capacity || 0) + " plazas" +
+        (full ? " · completo" : " · " + left + " libre" + (left === 1 ? "" : "s"));
       const alerts = (ev.status === "closed" ? [] : alertBits(ev)).map((t) =>
         '<span class="alert">' + escapeHtml(t) + "</span>"
       ).join(" ");
+      const liga = leagueLine(ev, opts.leagueMap || {});
+      const place = placeLine(ev);
       const a = document.createElement("a");
       a.className = "card-link";
       a.href = "../e/?id=" + encodeURIComponent(ev.id);
       a.innerHTML =
-        (opts.badge ? '<span class="badge">' + opts.badge + "</span>" : "") +
-        '<span class="chip">' + type + "</span>" +
+        '<div class="chip-row">' +
+          '<span class="chip">' + type + "</span>" +
+          (mod ? '<span class="chip soft">' + escapeHtml(mod) + "</span>" : "") +
+          (opts.badge ? '<span class="badge">' + escapeHtml(opts.badge) + "</span>" : "") +
+          (opts.joined === true && !opts.badge
+            ? '<span class="badge">Inscrito</span>' : "") +
+        "</div>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
+        (liga ? '<p class="title-sub">' + escapeHtml(liga) + "</p>" : "") +
         '<p class="meta">' + when(ev.startsAtEpochMs) + "</p>" +
-        (ev.zone || ev.venueText
-          ? '<p class="meta">' + escapeHtml(ev.zone || ev.venueText) + "</p>"
-          : "") +
-        '<p class="meta">' + spots +
-          (left > 0 ? " · " + left + " libre" + (left === 1 ? "" : "s") : "") +
-        "</p>" +
+        (place ? '<p class="meta">' + escapeHtml(place) + "</p>" : "") +
+        '<span class="spots ' + (full ? "full" : "open") + '">' + escapeHtml(spotsTxt) + "</span>" +
         (alerts ? "<div>" + alerts + "</div>" : "");
       wrap.appendChild(a);
       if (opts.canLeave) {
@@ -427,6 +517,42 @@
         wrap.appendChild(actions);
       }
       return wrap;
+    }
+
+    async function loadLeagueNameMap() {
+      const map = {};
+      try {
+        const snap = await getDocs(collection(db, "league_tables"));
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          map[d.id] = data.nombre || "";
+        });
+      } catch (e) {
+        console.warn("league map", e);
+      }
+      return map;
+    }
+
+    async function myOpenSignupIds(uid) {
+      const items = mineOpen(await loadMine(uid));
+      return new Set(items.map((e) => e.id));
+    }
+
+    function renderNickDatosUI() {
+      const saved = (getStoredName() || "").trim();
+      const savedBox = document.getElementById("nickSavedBox");
+      const editWrap = document.getElementById("nickEditWrap");
+      const input = document.getElementById("nameInput");
+      if (saved) {
+        document.getElementById("nickSavedValue").textContent = saved;
+        savedBox.hidden = false;
+        editWrap.hidden = true;
+        input.value = saved;
+      } else {
+        savedBox.hidden = true;
+        editWrap.hidden = false;
+        input.value = auth.currentUser ? niceName(auth.currentUser) : "";
+      }
     }
 
     async function promoteFirstWaitlist(eventId, remaining) {
@@ -610,6 +736,7 @@
       if (tab === "datos") {
         listEl.hidden = true;
         datosEl.hidden = false;
+        renderNickDatosUI();
         return;
       }
       listEl.hidden = false;
@@ -620,15 +747,29 @@
         listEl.className = "";
         listEl.innerHTML = "";
         if (tab === "open") {
-          const list = await loadOpen();
+          const [list, leagueMap, joinedIds] = await Promise.all([
+            loadOpen(),
+            loadLeagueNameMap(),
+            myOpenSignupIds(auth.currentUser.uid),
+          ]);
           if (!list.length) {
             listEl.className = "empty";
             listEl.textContent = "No hay eventos abiertos por ahora.";
             return;
           }
-          list.forEach((ev) => listEl.appendChild(eventCard(ev)));
+          list.forEach((ev) => {
+            const joined = joinedIds.has(ev.id);
+            listEl.appendChild(eventCard(ev, {
+              leagueMap,
+              joined,
+              badge: joined ? "Inscrito" : "",
+            }));
+          });
         } else if (tab === "mine") {
-          const items = mineOpen(await loadMine(auth.currentUser.uid));
+          const [items, leagueMap] = await Promise.all([
+            mineOpen(await loadMine(auth.currentUser.uid)),
+            loadLeagueNameMap(),
+          ]);
           if (!items.length) {
             listEl.className = "empty";
             listEl.textContent = "No tenés inscripciones abiertas.";
@@ -636,7 +777,7 @@
           }
           items.forEach((ev) => {
             const badge = ev._st === "waitlist" ? "Reserva" : "Inscrito";
-            listEl.appendChild(eventCard(ev, { badge, canLeave: true }));
+            listEl.appendChild(eventCard(ev, { badge, canLeave: true, leagueMap }));
           });
         } else if (tab === "played") {
           const email = (auth.currentUser.email || "").trim().toLowerCase();
@@ -707,7 +848,8 @@
       }
       setTheme(document.getElementById("themeSelect").value);
       showApp(auth.currentUser);
-      toast("Datos guardados");
+      renderNickDatosUI();
+      toast("Nick guardado");
     }
 
     googleBtn.addEventListener("click", () => loginGoogle());
@@ -726,6 +868,14 @@
       await loginGoogle();
     });
     document.getElementById("saveDatosBtn").addEventListener("click", saveDatos);
+    document.getElementById("editNickBtn").addEventListener("click", () => {
+      document.getElementById("nickSavedBox").hidden = true;
+      document.getElementById("nickEditWrap").hidden = false;
+      const input = document.getElementById("nameInput");
+      input.value = getStoredName() || "";
+      input.focus();
+      input.select();
+    });
     document.getElementById("themeSelect").addEventListener("change", (e) => {
       setTheme(e.target.value);
     });
