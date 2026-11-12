@@ -212,6 +212,7 @@
         <button type="button" class="tab active" id="tabOpen">Abiertos</button>
         <button type="button" class="tab" id="tabMine">Mis insc.</button>
         <button type="button" class="tab" id="tabPlayed">Jugados</button>
+        <button type="button" class="tab" id="tabLeagues">Ligas</button>
         <button type="button" class="tab" id="tabDatos">Mis datos</button>
       </div>
 
@@ -270,7 +271,9 @@
       ? "datos"
       : location.hash === "#jugados"
         ? "played"
-        : "open";
+        : location.hash === "#ligas"
+          ? "leagues"
+          : "open";
     let auth = null;
     let db = null;
     let booted = false;
@@ -515,18 +518,56 @@
         .sort((a, b) => (b.startsAtEpochMs || 0) - (a.startsAtEpochMs || 0));
     }
 
-    /** Resultados publicados al guardar/compartir en la app. */
+    /** Resultados publicados (jugador del día o miembro de la liga = viewerEmails). */
     async function loadMyResults(email) {
       if (!email) return [];
-      const q = query(
+      const map = new Map();
+      const qViewer = query(
+        collection(db, "event_results"),
+        where("viewerEmails", "array-contains", email),
+      );
+      const qPart = query(
         collection(db, "event_results"),
         where("participantEmails", "array-contains", email),
+      );
+      const [snapV, snapP] = await Promise.all([getDocs(qViewer), getDocs(qPart)]);
+      snapV.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
+      snapP.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
+      return [...map.values()].sort((a, b) => (b.fechaEpochMs || 0) - (a.fechaEpochMs || 0));
+    }
+
+    async function loadMyLeagues(email) {
+      if (!email) return [];
+      const q = query(
+        collection(db, "league_tables"),
+        where("memberEmails", "array-contains", email),
       );
       const snap = await getDocs(q);
       const list = [];
       snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-      list.sort((a, b) => (b.fechaEpochMs || 0) - (a.fechaEpochMs || 0));
+      list.sort((a, b) => (b.publishedAtEpochMs || 0) - (a.publishedAtEpochMs || 0));
       return list;
+    }
+
+    function leagueCard(ev) {
+      const wrap = document.createElement("div");
+      wrap.className = "card-wrap";
+      const a = document.createElement("a");
+      a.className = "card-link";
+      a.href = "../l/?id=" + encodeURIComponent(ev.id || ev.serieId);
+      const top = Array.isArray(ev.ranking) && ev.ranking[0]
+        ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
+        : "";
+      a.innerHTML =
+        '<span class="badge">Liga</span>' +
+        '<span class="chip">' + (ev.activa ? "EN CURSO" : "FIN") + "</span>" +
+        "<h2>" + escapeHtml(ev.nombre || "Liga") + "</h2>" +
+        '<p class="meta">' + escapeHtml(ev.numJornadas || 0) + " jornadas" +
+          (ev.ultimoEventoTitulo ? " · " + escapeHtml(ev.ultimoEventoTitulo) : "") +
+        "</p>" +
+        (top ? '<p class="meta">' + top + "</p>" : "");
+      wrap.appendChild(a);
+      return wrap;
     }
 
     function resultCard(ev) {
@@ -604,15 +645,24 @@
           if (!results.length && !closedSignups.length) {
             listEl.className = "empty";
             listEl.textContent =
-              "Cuando se guarde/comparta un evento en la app (con tu email en el jugador), aparecerá acá.";
+              "Pedile al organizador que publique la liga en la web (ícono nube en el ranking), con tu email en Gestión de jugadores.";
             return;
           }
           results.forEach((ev) => listEl.appendChild(resultCard(ev)));
           closedSignups.forEach((ev) => {
-            // Evitar duplicar si ya hay event_results del mismo open event / título reciente
             if (results.some((r) => r.title === ev.title)) return;
             listEl.appendChild(eventCard(ev, { badge: "Cerrado", canLeave: false }));
           });
+        } else if (tab === "leagues") {
+          const email = (auth.currentUser.email || "").trim().toLowerCase();
+          const list = email ? await loadMyLeagues(email) : [];
+          if (!list.length) {
+            listEl.className = "empty";
+            listEl.textContent =
+              "Todavía no hay ligas publicadas para tu email. En la app: ranking de la liga → nube (Publicar en la web).";
+            return;
+          }
+          list.forEach((ev) => listEl.appendChild(leagueCard(ev)));
         }
       } catch (e) {
         console.error(e);
@@ -634,9 +684,11 @@
       document.getElementById("tabOpen").classList.toggle("active", next === "open");
       document.getElementById("tabMine").classList.toggle("active", next === "mine");
       document.getElementById("tabPlayed").classList.toggle("active", next === "played");
+      document.getElementById("tabLeagues").classList.toggle("active", next === "leagues");
       document.getElementById("tabDatos").classList.toggle("active", next === "datos");
       if (next === "datos") history.replaceState(null, "", "#datos");
       else if (next === "played") history.replaceState(null, "", "#jugados");
+      else if (next === "leagues") history.replaceState(null, "", "#ligas");
       else if (location.hash) history.replaceState(null, "", location.pathname);
       refresh();
     }
@@ -680,6 +732,7 @@
     document.getElementById("tabOpen").addEventListener("click", () => setTab("open"));
     document.getElementById("tabMine").addEventListener("click", () => setTab("mine"));
     document.getElementById("tabPlayed").addEventListener("click", () => setTab("played"));
+    document.getElementById("tabLeagues").addEventListener("click", () => setTab("leagues"));
     document.getElementById("tabDatos").addEventListener("click", () => setTab("datos"));
 
     if (!ready) {

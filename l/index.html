@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Liga · FixtureGo</title>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #0b1f2e; --bg2: #1a4a6e; --card: #123049; --text: #f4f7fb;
+      --muted: #9fb3c8; --accent: #7ed957; --line: #2a5070; --table: #0e2a40;
+    }
+    [data-theme="light"] {
+      --bg: #eef5fa; --bg2: #cfe0ee; --card: #fff; --text: #0b1f2e;
+      --muted: #5a7288; --accent: #2f9e44; --line: #d0dde8; --table: #f3f7fb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1100px 520px at 15% -15%, var(--bg2), var(--bg));
+      padding: 18px 14px 48px;
+    }
+    .wrap { max-width: 560px; margin: 0 auto; }
+    a { color: var(--accent); font-weight: 700; text-decoration: none; }
+    .card {
+      background: var(--card); border-radius: 18px; padding: 18px 14px 22px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.28);
+    }
+    h1 { margin: 8px 0 6px; font-size: 1.3rem; font-weight: 800; }
+    .meta { color: var(--muted); font-size: .9rem; margin: 3px 0; }
+    .chip {
+      display: inline-block; background: #1e4d7a; color: #fff;
+      font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    }
+    h2 { margin: 20px 0 10px; font-size: 1.05rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: .78rem; background: var(--table); }
+    th, td { padding: 7px 6px; text-align: left; white-space: nowrap; }
+    th { color: var(--muted); border-bottom: 1px solid var(--line); }
+    tr.top td { background: rgba(245, 215, 110, .14); }
+    .events a {
+      display: block; padding: 10px 12px; margin: 6px 0; border-radius: 10px;
+      border: 1px solid var(--line); background: var(--table); color: var(--text); font-weight: 650;
+    }
+    .loading, .err { text-align: center; padding: 40px 12px; color: var(--muted); }
+    .err { color: #ffb4a8; }
+  </style>
+  <script src="../e/firebase-config.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="../eventos/#ligas">← Ligas</a></p>
+    <div id="loading" class="loading">Cargando liga…</div>
+    <p id="err" class="err" hidden>No encontramos esta liga.</p>
+    <div id="card" class="card" hidden></div>
+  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, collection, query, where, getDocs,
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { applySavedTheme } from "../js/profile.js";
+
+    applySavedTheme();
+    const id = new URLSearchParams(location.search).get("id");
+    const cfg = window.FIXTUREGO_FIREBASE;
+    const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";
+
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
+
+    if (!id || !ready) {
+      document.getElementById("loading").hidden = true;
+      document.getElementById("err").hidden = false;
+    } else {
+      const app = initializeApp(cfg);
+      const db = getFirestore(app);
+      const snap = await getDoc(doc(db, "league_tables", id));
+      document.getElementById("loading").hidden = true;
+      if (!snap.exists()) {
+        document.getElementById("err").hidden = false;
+      } else {
+        const d = snap.data();
+        const card = document.getElementById("card");
+        card.hidden = false;
+        const ranking = Array.isArray(d.ranking) ? d.ranking : [];
+        const rows = ranking.map((r) => {
+          const pos = r.pos || 0;
+          const pts = r.ajuste ? `${r.pts} (${r.ajuste > 0 ? "+" : ""}${r.ajuste})` : String(r.pts ?? "");
+          return `<tr class="${pos <= 3 ? "top" : ""}">
+            <td>${pos}</td><td>${esc(r.nombre)}</td><td><strong>${esc(pts)}</strong></td>
+            <td>${esc(r.ev)}</td><td>${esc(r.pj)}</td><td>${esc(r.pg)}</td>
+            <td>${esc(r.pe)}</td><td>${esc(r.pp)}</td><td>${esc(r.dif)}</td>
+            <td>${esc(r.pod1)}/${esc(r.pod2)}/${esc(r.pod3)}</td>
+          </tr>`;
+        }).join("");
+
+        const evSnap = await getDocs(query(
+          collection(db, "event_results"),
+          where("serieId", "==", id),
+        ));
+        const events = [];
+        evSnap.forEach((e) => events.push({ id: e.id, ...e.data() }));
+        events.sort((a, b) => (b.jornada || 0) - (a.jornada || 0));
+        const evHtml = events.map((e) =>
+          `<a href="../r/?id=${encodeURIComponent(e.id)}">` +
+          (e.jornada ? `J${esc(e.jornada)} · ` : "") +
+          `${esc(e.title || "Evento")}</a>`
+        ).join("");
+
+        card.innerHTML =
+          `<span class="chip">${d.activa ? "EN CURSO" : "FINALIZADA"}</span>` +
+          `<h1>${esc(d.nombre || "Liga")}</h1>` +
+          `<p class="meta">${esc(d.numJornadas || 0)} jornadas` +
+            (d.ultimoEventoTitulo ? " · Último: " + esc(d.ultimoEventoTitulo) : "") +
+          `</p>` +
+          `<h2>Tabla general</h2>` +
+          `<div class="table-wrap"><table><thead><tr>
+            <th>#</th><th>Jugador</th><th>PTS</th><th>EV</th><th>PJ</th>
+            <th>PG</th><th>PE</th><th>PP</th><th>D</th><th>POD</th>
+          </tr></thead><tbody>${rows}</tbody></table></div>` +
+          (evHtml ? `<h2>Eventos</h2><div class="events">${evHtml}</div>` : "");
+      }
+    }
+  </script>
+</body>
+</html>
