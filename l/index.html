@@ -22,6 +22,15 @@
     }
     .wrap { max-width: 560px; margin: 0 auto; }
     a { color: var(--accent); font-weight: 700; text-decoration: none; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 16px; border-radius: 999px;
+      border: 1.5px solid rgba(126, 217, 87, .55);
+      background: rgba(126, 217, 87, .16);
+      color: var(--accent); font-weight: 800; font-size: 1rem;
+      text-decoration: none; line-height: 1; box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    }
+    .back-btn .arrow { font-size: 1.35rem; font-weight: 900; line-height: 1; }
     .card {
       background: var(--card); border-radius: 18px; padding: 18px 14px 22px;
       box-shadow: 0 16px 40px rgba(0,0,0,.28);
@@ -49,7 +58,7 @@
 </head>
 <body>
   <div class="wrap">
-    <p><a href="../eventos/#ligas">← Ligas</a></p>
+    <p><a class="back-btn" href="../eventos/#ligas"><span class="arrow" aria-hidden="true">←</span> Ligas</a></p>
     <div id="loading" class="loading">Cargando liga…</div>
     <p id="err" class="err" hidden>No encontramos esta liga.</p>
     <div id="card" class="card" hidden></div>

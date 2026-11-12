@@ -51,7 +51,19 @@
       display: flex; justify-content: space-between; align-items: center;
       margin-bottom: 16px; gap: 12px;
     }
-    .nav a, .linkish {
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 16px; border-radius: 999px;
+      border: 1.5px solid rgba(126, 217, 87, .55);
+      background: rgba(126, 217, 87, .16);
+      color: var(--accent); font-weight: 800; font-size: 1rem;
+      text-decoration: none; line-height: 1; box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    }
+    .back-btn .arrow { font-size: 1.35rem; font-weight: 900; line-height: 1; }
+    [data-theme="light"] .back-btn {
+      background: rgba(47, 158, 68, .12); border-color: rgba(47, 158, 68, .4);
+    }
+    .linkish {
       color: var(--accent); font-weight: 700; text-decoration: none; font-size: .9rem;
       background: none; border: none; cursor: pointer; padding: 0;
     }
@@ -123,6 +135,26 @@
     .roster-num { color: var(--muted); font-size: .75rem; font-weight: 600; margin-right: 2px; }
     #rosterWait { margin: 12px 0 0; font-size: .85rem; }
 
+    .finished {
+      margin-top: 18px; padding: 16px 14px; border-radius: 14px;
+      border: 1px solid rgba(126, 217, 87, .35);
+      background: rgba(126, 217, 87, .08);
+    }
+    .finished-label {
+      margin: 0 0 10px; font-weight: 800; color: var(--accent); font-size: 1.05rem;
+    }
+    .finished .meta { margin: 2px 0; }
+    .podium { margin: 10px 0 12px; display: flex; flex-direction: column; gap: 6px; }
+    .podium-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--line);
+      font-weight: 700;
+    }
+    .podium-row .pos { color: var(--muted); min-width: 2.2rem; font-size: .85rem; }
+    .podium-row .pts { margin-left: auto; color: var(--accent); font-size: .9rem; }
+    .finished .btn { margin-top: 4px; }
+
     .action {
       margin-top: 22px; padding: 18px 16px; border-radius: 14px;
       background: #0e2a40; border: 1px solid var(--line); text-align: center;
@@ -170,7 +202,7 @@
 <body>
   <div class="wrap">
     <div class="nav">
-      <a href="../eventos/">← Eventos</a>
+      <a class="back-btn" href="../eventos/"><span class="arrow" aria-hidden="true">←</span> Eventos</a>
       <div id="navUser" class="userbox" hidden>
         <div class="row">
           <div class="avatar" id="avatar">G</div>
@@ -203,9 +235,16 @@
         <p class="meta" id="closes"></p>
         <div id="alertsBox"></div>
 
+        <div class="finished" id="finishedBox" hidden>
+          <p class="finished-label" id="finishedLabel">Evento finalizado</p>
+          <p class="meta" id="finishedMeta"></p>
+          <div class="podium" id="podium" hidden></div>
+          <a class="btn" id="resultBtn" hidden href="#">Ver clasificación completa</a>
+        </div>
+
         <div class="roster" id="rosterBox" hidden>
           <div class="roster-head">
-            <h3>Inscritos</h3>
+            <h3 id="rosterTitle">Inscritos</h3>
             <span class="roster-count" id="rosterCount"></span>
           </div>
           <ul id="rosterList"></ul>
@@ -306,6 +345,7 @@
     let auth = null;
     let db = null;
     let eventState = null;
+    let resultState = null; // event_results preview si el evento ya se jugó
     let myStatus = null; // null | confirmed | waitlist
     let busy = false;
     const provider = new GoogleAuthProvider();
@@ -346,7 +386,72 @@
       msgEl.className = "msg " + (isErr ? "err" : "ok");
     }
 
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
+    function medal(pos) {
+      return pos === 1 ? "🥇" : pos === 2 ? "🥈" : pos === 3 ? "🥉" : "#" + pos;
+    }
+
+    function fillFinishedBox(s) {
+      const box = document.getElementById("finishedBox");
+      const meta = document.getElementById("finishedMeta");
+      const podium = document.getElementById("podium");
+      const resultBtn = document.getElementById("resultBtn");
+      const shareBtn = document.getElementById("shareBtn");
+      const closed = s && s.status !== "open";
+      if (!closed) {
+        box.hidden = true;
+        shareBtn.hidden = false;
+        shareBtn.textContent = "Compartir por WhatsApp";
+        return;
+      }
+      box.hidden = false;
+      shareBtn.hidden = true;
+      const bits = [];
+      if (s.serieNombre) {
+        bits.push(
+          (s.jornada ? "Jornada " + s.jornada + " · " : "") + s.serieNombre,
+        );
+      }
+      bits.push((s.joined || 0) + " jugadores");
+      if (resultState) {
+        document.getElementById("finishedLabel").textContent = "Resultado publicado";
+        const ranking = Array.isArray(resultState.ranking) ? resultState.ranking : [];
+        if (ranking.length) {
+          podium.hidden = false;
+          podium.innerHTML = ranking.slice(0, 3).map((r) => {
+            const pos = r.pos || 0;
+            const name = (r.nombre || "Jugador").trim() || "Jugador";
+            const pts = r.pts != null ? r.pts + " pts" : "";
+            return '<div class="podium-row">' +
+              '<span class="pos">' + medal(pos) + "</span>" +
+              "<span>" + esc(name) + "</span>" +
+              (pts ? '<span class="pts">' + esc(pts) + "</span>" : "") +
+              "</div>";
+          }).join("");
+        } else {
+          podium.hidden = true;
+          podium.innerHTML = "";
+        }
+        resultBtn.hidden = false;
+        resultBtn.href = "../r/?id=" + encodeURIComponent(resultState.id);
+        shareBtn.hidden = false;
+        shareBtn.textContent = "Compartir resultado";
+        bits.push("Clasificación disponible");
+      } else {
+        document.getElementById("finishedLabel").textContent = "Evento finalizado";
+        podium.hidden = true;
+        podium.innerHTML = "";
+        resultBtn.hidden = true;
+        bits.push("Todavía no hay clasificación publicada en la web");
+      }
+      meta.textContent = bits.join(" · ");
+    }
+
     function fillEvent(s) {
+      const closed = s.status !== "open";
       document.getElementById("typeChip").textContent =
         s.type === "torneo" ? "TORNEO" : "AMERICANA";
       document.getElementById("title").textContent = s.title || "Evento";
@@ -370,18 +475,39 @@
         mod.textContent = map[s.modality] || s.modality;
       } else mod.hidden = true;
       const zone = document.getElementById("zone");
-      if (s.zone) { zone.hidden = false; zone.textContent = "Zona: " + s.zone; }
-      else zone.hidden = true;
       const venue = document.getElementById("venue");
-      if (s.venue) { venue.hidden = false; venue.textContent = s.venue; }
-      else venue.hidden = true;
-      let spots = s.joined + " de " + s.capacity + " plazas";
-      if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
-      document.getElementById("spots").textContent = spots;
-      document.getElementById("min").textContent =
-        s.minConfirmed > 0 ? "Mínimo para iniciar: " + s.minConfirmed : "";
+      const club = (s.venue || "").trim();
+      const city = (s.zone || "").trim();
+      if (club && city) {
+        zone.hidden = false;
+        zone.textContent = club + " · " + city;
+        venue.hidden = true;
+      } else if (club || city) {
+        zone.hidden = false;
+        zone.textContent = club || city;
+        venue.hidden = true;
+      } else {
+        zone.hidden = true;
+        venue.hidden = true;
+      }
+      const spotsEl = document.getElementById("spots");
+      if (closed) {
+        spotsEl.textContent = (s.joined || 0) + " jugadores en la lista";
+      } else {
+        let spots = s.joined + " de " + s.capacity + " plazas";
+        if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
+        spotsEl.textContent = spots;
+      }
+      const minEl = document.getElementById("min");
+      if (!closed && s.minConfirmed > 0) {
+        minEl.hidden = false;
+        minEl.textContent = "Mínimo para iniciar: " + s.minConfirmed;
+      } else {
+        minEl.hidden = true;
+        minEl.textContent = "";
+      }
       const closesEl = document.getElementById("closes");
-      if (s.closesAt) {
+      if (!closed && s.closesAt) {
         closesEl.hidden = false;
         closesEl.textContent = "Cierra inscripción: " +
           new Date(s.closesAt).toLocaleString("es", {
@@ -392,17 +518,21 @@
       }
       const alerts = document.getElementById("alertsBox");
       const bits = [];
-      const left = Math.max(0, (s.capacity || 0) - (s.joined || 0));
-      if (s.status === "open" && left > 0 && left <= 2) {
-        bits.push("Quedan " + left + " plaza" + (left === 1 ? "" : "s"));
-      } else if (s.status === "open" && left === 0) {
-        bits.push("Completo · lista de espera");
-      }
-      if (s.closesAt && s.closesAt > Date.now()) {
-        const h = Math.round((s.closesAt - Date.now()) / 3600000);
-        if (h <= 48) bits.push(h <= 1 ? "Cierra en ~1 h" : "Cierra en ~" + h + " h");
+      if (!closed) {
+        const left = Math.max(0, (s.capacity || 0) - (s.joined || 0));
+        if (left > 0 && left <= 2) {
+          bits.push("Quedan " + left + " plaza" + (left === 1 ? "" : "s"));
+        } else if (left === 0) {
+          bits.push("Completo · lista de espera");
+        }
+        if (s.closesAt && s.closesAt > Date.now()) {
+          const h = Math.round((s.closesAt - Date.now()) / 3600000);
+          if (h <= 48) bits.push(h <= 1 ? "Cierra en ~1 h" : "Cierra en ~" + h + " h");
+        }
       }
       alerts.innerHTML = bits.map((t) => '<span class="alert">' + t + "</span>").join("");
+      document.getElementById("rosterTitle").textContent = closed ? "Jugaron" : "Inscritos";
+      fillFinishedBox(s);
     }
 
     function renderRoster(signups) {
@@ -444,7 +574,8 @@
         li.appendChild(info);
         list.appendChild(li);
       });
-      if (wait > 0) {
+      const closed = eventState && eventState.status !== "open";
+      if (!closed && wait > 0) {
         waitEl.hidden = false;
         waitEl.textContent = "+" + wait + " en lista de espera";
       } else waitEl.hidden = true;
@@ -474,8 +605,18 @@
       }
 
       if (!open) {
-        actionTitle.textContent = "Inscripción cerrada";
-        actionSub.textContent = "Este evento ya no acepta más jugadores desde la web.";
+        actionTitle.textContent = "Evento finalizado";
+        actionSub.textContent = resultState
+          ? "Ya se jugó. Abajo tenés el podio y el enlace a la clasificación completa."
+          : "Ya se jugó. Cuando el organizador publique el resultado en la app, vas a verlo acá.";
+        if (resultState) {
+          primaryBtn.hidden = false;
+          primaryBtn.className = "btn";
+          primaryBtn.textContent = "Ver clasificación";
+          primaryBtn.onclick = () => {
+            location.href = "../r/?id=" + encodeURIComponent(resultState.id);
+          };
+        }
         return;
       }
 
@@ -580,7 +721,24 @@
         venue: d.venueText || "",
         status: d.status || "open",
         closesAt: d.registrationClosesAtEpochMs || null,
+        localEventoId: d.localEventoId || "",
+        serieNombre: d.serieNombre || "",
+        jornada: d.jornada || 0,
       };
+    }
+
+    async function loadResultForEvent(ev) {
+      if (!ev || ev.status === "open") return null;
+      const localId = (ev.localEventoId || "").trim();
+      if (!localId) return null;
+      try {
+        const snap = await getDoc(doc(db, "event_results", localId));
+        if (!snap.exists()) return null;
+        return { id: snap.id, ...snap.data() };
+      } catch (e) {
+        console.warn("result", e);
+        return null;
+      }
     }
 
     async function loadSignups() {
@@ -805,6 +963,13 @@
             hour: "2-digit", minute: "2-digit",
           })
         : "";
+      if (resultState) {
+        const url = "https://fixturego.com/r/?id=" + encodeURIComponent(resultState.id);
+        const text = "Resultado de " + title + (whenTxt ? " (" + whenTxt + ")" : "") +
+          " en FixtureGo\n" + url;
+        window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+        return;
+      }
       const url = "https://fixturego.com/e/?id=" + encodeURIComponent(eventId);
       const text = "¡Sumate a " + title + (whenTxt ? " (" + whenTxt + ")" : "") +
         " en FixtureGo!\n" + url;
@@ -826,6 +991,7 @@
         if (!eventState) {
           document.getElementById("err").hidden = false;
         } else {
+          resultState = await loadResultForEvent(eventState);
           document.getElementById("card").hidden = false;
           fillEvent(eventState);
           await refreshMineAndRoster();

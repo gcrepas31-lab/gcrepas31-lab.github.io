@@ -25,6 +25,15 @@
     .wrap { max-width: 520px; margin: 0 auto; }
     a { color: var(--accent); font-weight: 700; text-decoration: none; }
     .nav { margin-bottom: 14px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 16px; border-radius: 999px;
+      border: 1.5px solid rgba(126, 217, 87, .55);
+      background: rgba(126, 217, 87, .16);
+      color: var(--accent); font-weight: 800; font-size: 1rem;
+      text-decoration: none; line-height: 1; box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    }
+    .back-btn .arrow { font-size: 1.35rem; font-weight: 900; line-height: 1; }
     .card {
       background: var(--card); border-radius: 18px; overflow: hidden;
       box-shadow: 0 16px 40px rgba(0,0,0,.28); padding: 18px 16px 22px;
@@ -64,7 +73,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="nav"><a href="../eventos/#jugados">← Jugados</a></div>
+    <div class="nav"><a class="back-btn" href="../eventos/#jugados"><span class="arrow" aria-hidden="true">←</span> Jugados</a></div>
     <div id="loading" class="loading">Cargando resultado…</div>
     <p id="err" class="err" hidden>No encontramos este resultado.</p>
     <div id="card" class="card" hidden></div>
