@@ -304,6 +304,7 @@
       loadRemoteProfile, saveRemoteProfile,
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
+    import { modalityLabelFromKey } from "../js/eventLabels.js";
 
     applySavedTheme();
 
@@ -471,18 +472,10 @@
             hour: "2-digit", minute: "2-digit",
           })
         : "—";
-      const map = {
-        all_vs_all: "Todos vs todos",
-        pairs: "Por parejas",
-        mixed_fixed: "Mixta fija",
-        mixed_rotating: "Mixta rotativa",
-        custom: "Personalizada",
-        ladder: "Escalera",
-      };
       const modChip = document.getElementById("modalityChip");
       if (s.type === "americana" && s.modality) {
         modChip.hidden = false;
-        modChip.textContent = map[s.modality] || String(s.modality).replace(/_/g, " ");
+        modChip.textContent = modalityLabelFromKey(s.modality);
       } else {
         modChip.hidden = true;
         modChip.textContent = "";

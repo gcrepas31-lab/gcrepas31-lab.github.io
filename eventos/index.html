@@ -307,6 +307,7 @@
       loadRemoteProfile, saveRemoteProfile,
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
+    import { modalityLabelForEvent } from "../js/eventLabels.js";
 
     applySavedTheme();
 
@@ -447,19 +448,8 @@
       }
     }
 
-    const MODALITY_LABEL = {
-      all_vs_all: "Todos vs todos",
-      pairs: "Por parejas",
-      mixed_fixed: "Mixta fija",
-      mixed_rotating: "Mixta rotativa",
-      custom: "Personalizada",
-      ladder: "Escalera",
-    };
-
     function modalityLabel(ev) {
-      if (ev.type === "torneo") return "Torneo";
-      const key = ev.americanaModality || ev.modality || "";
-      return MODALITY_LABEL[key] || (key ? String(key).replace(/_/g, " ") : "");
+      return modalityLabelForEvent(ev);
     }
 
     function placeLine(ev) {
