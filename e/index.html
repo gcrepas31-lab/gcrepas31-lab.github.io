@@ -226,6 +226,13 @@
       margin-top: 16px; text-align: center;
     }
     .footer a { color: var(--muted); font-size: .85rem; }
+    .notify-row {
+      margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid var(--line); display: flex; gap: 12px;
+      align-items: center; justify-content: space-between; text-align: left;
+    }
+    .notify-row span { font-size: .88rem; color: var(--text); line-height: 1.35; flex: 1; }
+    .notify-row input { width: 20px; height: 20px; accent-color: var(--accent); }
 
     .err-page { color: var(--danger); text-align: center; margin-top: 40px; }
     .msg { margin-top: 10px; font-size: .9rem; }
@@ -311,6 +318,11 @@
           <ul id="waitList"></ul>
         </div>
 
+        <div class="notify-row" id="notifyRow" hidden>
+          <span>Avisarme cuando publiquen el resultado (en la app)</span>
+          <input type="checkbox" id="notifyResult" />
+        </div>
+
         <div class="footer" style="display:flex;flex-direction:column;gap:10px;align-items:center">
           <button type="button" class="linkish" id="shareBtn" style="color:var(--accent);font-weight:700">
             Compartir por WhatsApp
@@ -330,6 +342,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc, deleteDoc,
+      writeBatch,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       niceName, greetName, initial, applySavedTheme, setStoredName, getStoredName,
@@ -338,6 +351,9 @@
     import { signInWithGoogleId } from "../js/googleAuth.js";
     import { modalityLabelFromKey } from "../js/eventLabels.js";
     import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
+    import {
+      isSubEnabled, setSubEnabled, SUB_EVENT,
+    } from "../js/pushSubs.js";
 
     applySavedTheme();
     applyBackButton(document.querySelector(".back-btn"), {
@@ -854,6 +870,26 @@
         }
       }
       renderAction();
+      await syncNotifyRow();
+    }
+
+    async function syncNotifyRow() {
+      const row = document.getElementById("notifyRow");
+      const box = document.getElementById("notifyResult");
+      const u = auth && auth.currentUser;
+      if (!row || !box) return;
+      if (!isGoogle(u) || !eventId || !db) {
+        row.hidden = true;
+        return;
+      }
+      row.hidden = false;
+      box.disabled = true;
+      try {
+        box.checked = await isSubEnabled(db, u.uid, SUB_EVENT, eventId, { getDoc, doc });
+      } catch (_) {
+        box.checked = false;
+      }
+      box.disabled = false;
     }
 
     async function joinEvent() {
@@ -1041,6 +1077,28 @@
       await loginGoogle();
     });
     leaveBtn.addEventListener("click", leaveEvent);
+    document.getElementById("notifyResult").addEventListener("change", async (ev) => {
+      const u = auth && auth.currentUser;
+      const box = ev.target;
+      if (!isGoogle(u) || !db || !eventId) {
+        box.checked = false;
+        return;
+      }
+      box.disabled = true;
+      try {
+        await setSubEnabled(
+          db, u.uid, SUB_EVENT, eventId, box.checked,
+          (eventState && eventState.title) || "",
+          { doc, writeBatch },
+        );
+        showMsg(box.checked ? "Avisos activados (en la app)." : "Avisos desactivados.", false);
+      } catch (e) {
+        console.error(e);
+        box.checked = !box.checked;
+        showMsg(e.message || "No se pudo guardar el aviso.", true);
+      }
+      box.disabled = false;
+    });
     saveNickBtn.addEventListener("click", saveNickOnList);
     document.getElementById("shareBtn").addEventListener("click", () => {
       if (!eventState || eventState.status !== "open") return;
