@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>Inscripción · FixtureGo</title>
   <meta name="description" content="Inscribite a un evento abierto en FixtureGo Padel." />
   <link rel="icon" href="../logo-fixturego.jpg" type="image/jpeg" />
@@ -351,9 +352,8 @@
     import { signInWithGoogleId } from "../js/googleAuth.js";
     import { modalityLabelFromKey } from "../js/eventLabels.js";
     import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
-    import {
-      isSubEnabled, setSubEnabled, SUB_EVENT, PUSH_OPT_IN_UI,
-    } from "../js/pushSubs.js";
+    // Push opt-in desactivado (sin Blaze). No importar pushSubs aquí:
+    // un JS viejo en caché rompía todo el módulo y dejaba "Cargando evento…".
 
     applySavedTheme();
     applyBackButton(document.querySelector(".back-btn"), {
@@ -870,31 +870,8 @@
         }
       }
       renderAction();
-      await syncNotifyRow();
-    }
-
-    async function syncNotifyRow() {
-      const row = document.getElementById("notifyRow");
-      const box = document.getElementById("notifyResult");
-      const u = auth && auth.currentUser;
-      if (!row || !box) return;
-      // Push opt-in oculto hasta Blaze / Functions
-      if (!PUSH_OPT_IN_UI) {
-        row.hidden = true;
-        return;
-      }
-      if (!isGoogle(u) || !eventId || !db) {
-        row.hidden = true;
-        return;
-      }
-      row.hidden = false;
-      box.disabled = true;
-      try {
-        box.checked = await isSubEnabled(db, u.uid, SUB_EVENT, eventId, { getDoc, doc });
-      } catch (_) {
-        box.checked = false;
-      }
-      box.disabled = false;
+      const notifyRow = document.getElementById("notifyRow");
+      if (notifyRow) notifyRow.hidden = true;
     }
 
     async function joinEvent() {
@@ -1082,28 +1059,6 @@
       await loginGoogle();
     });
     leaveBtn.addEventListener("click", leaveEvent);
-    document.getElementById("notifyResult").addEventListener("change", async (ev) => {
-      const u = auth && auth.currentUser;
-      const box = ev.target;
-      if (!isGoogle(u) || !db || !eventId) {
-        box.checked = false;
-        return;
-      }
-      box.disabled = true;
-      try {
-        await setSubEnabled(
-          db, u.uid, SUB_EVENT, eventId, box.checked,
-          (eventState && eventState.title) || "",
-          { doc, writeBatch },
-        );
-        showMsg(box.checked ? "Avisos activados (en la app)." : "Avisos desactivados.", false);
-      } catch (e) {
-        console.error(e);
-        box.checked = !box.checked;
-        showMsg(e.message || "No se pudo guardar el aviso.", true);
-      }
-      box.disabled = false;
-    });
     saveNickBtn.addEventListener("click", saveNickOnList);
     document.getElementById("shareBtn").addEventListener("click", () => {
       if (!eventState || eventState.status !== "open") return;

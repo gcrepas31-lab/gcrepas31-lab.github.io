@@ -79,14 +79,11 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getAuth, onAuthStateChanged,
-    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, collection, query, where, getDocs, writeBatch,
+      getFirestore, doc, getDoc, collection, query, where, getDocs,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { applySavedTheme } from "../js/profile.js";
     import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
-    import { isSubEnabled, setSubEnabled, SUB_LEAGUE, PUSH_OPT_IN_UI } from "../js/pushSubs.js";
+    // Push opt-in desactivado (sin Blaze). No importar pushSubs (caché rompía la página).
 
     applySavedTheme();
     applyBackButton(document.querySelector(".back-btn"), {
@@ -96,36 +93,11 @@
     const id = new URLSearchParams(location.search).get("id");
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";
-    let leagueName = "";
     let db = null;
-    let auth = null;
 
     function esc(s) {
       return String(s ?? "").replace(/[&<>"']/g, (c) =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-    }
-
-    async function syncNotify(uid) {
-      const row = document.getElementById("notifyRow");
-      const box = document.getElementById("notifyLeague");
-      if (!row || !box) return;
-      // Push opt-in oculto hasta Blaze / Functions
-      if (!PUSH_OPT_IN_UI) {
-        row.hidden = true;
-        return;
-      }
-      if (!uid || !db || !id) {
-        row.hidden = true;
-        return;
-      }
-      row.hidden = false;
-      box.disabled = true;
-      try {
-        box.checked = await isSubEnabled(db, uid, SUB_LEAGUE, id, { getDoc, doc });
-      } catch (_) {
-        box.checked = false;
-      }
-      box.disabled = false;
     }
 
     if (!id || !ready) {
@@ -134,14 +106,12 @@
     } else {
       const app = initializeApp(cfg);
       db = getFirestore(app);
-      auth = getAuth(app);
       const snap = await getDoc(doc(db, "league_tables", id));
       document.getElementById("loading").hidden = true;
       if (!snap.exists()) {
         document.getElementById("err").hidden = false;
       } else {
         const d = snap.data();
-        leagueName = d.nombre || "Liga";
         const card = document.getElementById("card");
         card.hidden = false;
         const ranking = Array.isArray(d.ranking) ? d.ranking : [];
@@ -182,33 +152,8 @@
           </tr></thead><tbody>${rows}</tbody></table></div>` +
           (evHtml ? `<h2>Eventos</h2><div class="events">${evHtml}</div>` : "");
 
-        document.getElementById("notifyLeague").addEventListener("change", async (ev) => {
-          const u = auth && auth.currentUser;
-          const box = ev.target;
-          if (!u || u.isAnonymous) {
-            box.checked = false;
-            alert("Entrá con Google en /eventos para activar avisos.");
-            return;
-          }
-          box.disabled = true;
-          try {
-            await setSubEnabled(
-              db, u.uid, SUB_LEAGUE, id, box.checked, leagueName,
-              { doc, writeBatch },
-            );
-          } catch (e) {
-            console.error(e);
-            box.checked = !box.checked;
-            alert(e.message || "No se pudo guardar");
-          }
-          box.disabled = false;
-        });
-
-        onAuthStateChanged(auth, (u) => {
-          const google = u && !u.isAnonymous && u.providerData &&
-            u.providerData.some((p) => p.providerId === "google.com");
-          syncNotify(google ? u.uid : null);
-        });
+        const notifyRow = document.getElementById("notifyRow");
+        if (notifyRow) notifyRow.hidden = true;
       }
     }
   </script>
