@@ -2,7 +2,12 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FixtureGo" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>FixtureGo · Eventos</title>
   <meta name="description" content="Inscripciones abiertas FixtureGo Padel." />
   <link rel="icon" href="../logo-fixturego.jpg" type="image/jpeg" />
@@ -320,16 +325,25 @@
     const gateErr = document.getElementById("gateErr");
     const googleBtn = document.getElementById("googleBtn");
 
-    let tab = location.hash === "#datos"
-      ? "datos"
-      : location.hash === "#jugados"
-        ? "played"
-        : location.hash === "#ligas"
-          ? "leagues"
-          : "open";
+    function tabFromHash() {
+      const h = (location.hash || "").toLowerCase();
+      if (h === "#datos") return "datos";
+      if (h === "#jugados") return "played";
+      if (h === "#ligas") return "leagues";
+      if (h === "#inscritos" || h === "#mine") return "mine";
+      return "open";
+    }
+    function isStandaloneApp() {
+      return (
+        window.navigator.standalone === true ||
+        window.matchMedia("(display-mode: standalone)").matches
+      );
+    }
+    let tab = tabFromHash();
     let auth = null;
     let db = null;
     let booted = false;
+    let refreshSeq = 0;
     const provider = new GoogleAuthProvider();
 
     function isGoogle(u) {
@@ -623,7 +637,12 @@
       );
       const snap = await getDocs(q);
       const list = [];
-      snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+      snap.forEach((d) => {
+        const data = d.data() || {};
+        // Filtro extra: en iOS a veces llega respuesta vieja / mezclada
+        if ((data.status || "open") !== "open") return;
+        list.push({ id: d.id, ...data });
+      });
       return list;
     }
 
@@ -747,8 +766,34 @@
       return m ? m[0] : null;
     }
 
+    function stillCurrent(seq, expectedTab) {
+      return seq === refreshSeq && tab === expectedTab;
+    }
+
+    function paintOpenList(list, leagueMap, joinedIds) {
+      listEl.className = "";
+      listEl.innerHTML = "";
+      if (!list.length) {
+        listEl.className = "empty";
+        listEl.textContent = "No hay eventos abiertos por ahora.";
+        return;
+      }
+      list.forEach((ev) => {
+        const joined = joinedIds.has(ev.id);
+        const isOwner = !!(auth.currentUser && ev.ownerUid === auth.currentUser.uid);
+        listEl.appendChild(eventCard(ev, {
+          leagueMap,
+          joined,
+          badge: joined ? "Inscripto" : "",
+          ownerBadge: isOwner ? "Creador" : "",
+        }));
+      });
+    }
+
     async function refresh() {
-      if (tab === "datos") {
+      const expectedTab = tab;
+      const seq = ++refreshSeq;
+      if (expectedTab === "datos") {
         listEl.hidden = true;
         datosEl.hidden = false;
         renderNickDatosUI();
@@ -759,38 +804,29 @@
       listEl.className = "loading";
       listEl.textContent = "Cargando…";
       try {
-        listEl.className = "";
-        listEl.innerHTML = "";
-        if (tab === "open") {
-          // Abiertos no debe caerse si falla “mis inscritos” / ligas
+        if (expectedTab === "open") {
+          // Pintar eventos abiertos rápido; badges de “Inscripto” después
           const list = await loadOpen();
-          const leagueMap = await loadLeagueNameMap().catch(() => ({}));
+          if (!stillCurrent(seq, expectedTab)) return;
+          const leagueMapP = loadLeagueNameMap().catch(() => ({}));
+          paintOpenList(list, {}, new Set());
+          const leagueMap = await leagueMapP;
           let joinedIds = new Set();
           try {
             joinedIds = await myOpenSignupIds(auth.currentUser && auth.currentUser.uid);
           } catch (e) {
             console.warn("joinedIds", e);
           }
-          if (!list.length) {
-            listEl.className = "empty";
-            listEl.textContent = "No hay eventos abiertos por ahora.";
-            return;
-          }
-          list.forEach((ev) => {
-            const joined = joinedIds.has(ev.id);
-            const isOwner = !!(auth.currentUser && ev.ownerUid === auth.currentUser.uid);
-            listEl.appendChild(eventCard(ev, {
-              leagueMap,
-              joined,
-              badge: joined ? "Inscripto" : "",
-              ownerBadge: isOwner ? "Creador" : "",
-            }));
-          });
-        } else if (tab === "mine") {
+          if (!stillCurrent(seq, expectedTab)) return;
+          paintOpenList(list, leagueMap, joinedIds);
+        } else if (expectedTab === "mine") {
           const [items, leagueMap] = await Promise.all([
             mineOpen(await loadMine(auth.currentUser.uid)),
-            loadLeagueNameMap(),
+            loadLeagueNameMap().catch(() => ({})),
           ]);
+          if (!stillCurrent(seq, expectedTab)) return;
+          listEl.className = "";
+          listEl.innerHTML = "";
           if (!items.length) {
             listEl.className = "empty";
             listEl.textContent = "No tenés inscripciones abiertas.";
@@ -800,10 +836,15 @@
             const badge = ev._st === "waitlist" ? "Reserva" : "Inscripto";
             listEl.appendChild(eventCard(ev, { badge, canLeave: true, leagueMap }));
           });
-        } else if (tab === "played") {
+        } else if (expectedTab === "played") {
           const email = (auth.currentUser.email || "").trim().toLowerCase();
-          const results = email ? await loadMyResults(email) : [];
-          const closedSignups = minePlayed(await loadMine(auth.currentUser.uid));
+          const [results, closedSignups] = await Promise.all([
+            email ? loadMyResults(email) : Promise.resolve([]),
+            loadMine(auth.currentUser.uid).then(minePlayed),
+          ]);
+          if (!stillCurrent(seq, expectedTab)) return;
+          listEl.className = "";
+          listEl.innerHTML = "";
           if (!results.length && !closedSignups.length) {
             listEl.className = "empty";
             listEl.textContent =
@@ -812,12 +853,16 @@
           }
           results.forEach((ev) => listEl.appendChild(resultCard(ev)));
           closedSignups.forEach((ev) => {
-            if (results.some((r) => r.title === ev.title)) return;
+            if ((ev.status || "") !== "closed") return;
+            if (results.some((r) => r.id === ev.id || r.title === ev.title)) return;
             listEl.appendChild(eventCard(ev, { badge: "Cerrado", canLeave: false }));
           });
-        } else if (tab === "leagues") {
+        } else if (expectedTab === "leagues") {
           const email = (auth.currentUser.email || "").trim().toLowerCase();
           const list = email ? await loadMyLeagues(email) : [];
+          if (!stillCurrent(seq, expectedTab)) return;
+          listEl.className = "";
+          listEl.innerHTML = "";
           if (!list.length) {
             listEl.className = "empty";
             listEl.textContent =
@@ -827,6 +872,7 @@
           list.forEach((ev) => listEl.appendChild(leagueCard(ev)));
         }
       } catch (e) {
+        if (!stillCurrent(seq, expectedTab)) return;
         console.error(e);
         const link = indexLinkFromError(e && e.message);
         listEl.className = "err";
@@ -841,18 +887,33 @@
       }
     }
 
-    function setTab(next) {
+    function setTab(next, opts) {
+      const silentHash = opts && opts.silentHash;
       tab = next;
       document.getElementById("tabOpen").classList.toggle("active", next === "open");
       document.getElementById("tabMine").classList.toggle("active", next === "mine");
       document.getElementById("tabPlayed").classList.toggle("active", next === "played");
       document.getElementById("tabLeagues").classList.toggle("active", next === "leagues");
       document.getElementById("tabDatos").classList.toggle("active", next === "datos");
-      if (next === "datos") history.replaceState(null, "", "#datos");
-      else if (next === "played") history.replaceState(null, "", "#jugados");
-      else if (next === "leagues") history.replaceState(null, "", "#ligas");
-      else if (location.hash) history.replaceState(null, "", location.pathname);
+      if (!silentHash) {
+        const hash =
+          next === "datos" ? "#datos"
+            : next === "played" ? "#jugados"
+              : next === "leagues" ? "#ligas"
+                : next === "mine" ? "#inscritos"
+                  : "#abiertos";
+        if (location.hash !== hash) {
+          history.replaceState(null, "", hash);
+        }
+      }
       refresh();
+    }
+
+    function resumeFromBackground() {
+      if (!booted || !auth || !isGoogle(auth.currentUser) || appEl.hidden) return;
+      // iPhone “Add to Home Screen” a menudo restaura DOM viejo; forzar pestaña actual
+      tab = tabFromHash();
+      setTab(tab, { silentHash: true });
     }
 
     async function saveDatos() {
@@ -913,6 +974,18 @@
     document.getElementById("tabLeagues").addEventListener("click", () => setTab("leagues"));
     document.getElementById("tabDatos").addEventListener("click", () => setTab("datos"));
 
+    window.addEventListener("hashchange", () => {
+      if (!booted) return;
+      const next = tabFromHash();
+      if (next !== tab) setTab(next, { silentHash: true });
+    });
+    window.addEventListener("pageshow", (e) => {
+      if (e.persisted || isStandaloneApp()) resumeFromBackground();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") resumeFromBackground();
+    });
+
     if (!ready) {
       showGate("Falta configurar Firebase en el sitio.");
     } else {
@@ -926,6 +999,11 @@
           await syncProfileForUser(u);
           if (!booted) {
             booted = true;
+            // En acceso directo iOS, empezar limpio en Abiertos si no hay hash útil
+            tab = tabFromHash();
+            if (isStandaloneApp() && !(location.hash || "").trim()) {
+              tab = "open";
+            }
             setTab(tab);
           } else if (!appEl.hidden) {
             await refresh();
