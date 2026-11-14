@@ -1,6 +1,12 @@
 /** Opt-in avisos resultado/liga (misma data que la app Android). */
-const SUB_EVENT = "event_result";
-const SUB_LEAGUE = "league";
+export const SUB_EVENT = "event_result";
+export const SUB_LEAGUE = "league";
+
+/**
+ * Off mientras no haya plan Blaze / Functions para enviar push.
+ * Poner en true cuando se reactive el envío.
+ */
+export const PUSH_OPT_IN_UI = false;
 
 function subDocId(type, targetId) {
   return type + "_" + targetId;
@@ -70,5 +76,3 @@ export async function setSubEnabled(
   }
   await batch.commit();
 }
-
-export { SUB_EVENT, SUB_LEAGUE };

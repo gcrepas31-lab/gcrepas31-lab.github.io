@@ -352,7 +352,7 @@
     import { modalityLabelFromKey } from "../js/eventLabels.js";
     import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
     import {
-      isSubEnabled, setSubEnabled, SUB_EVENT,
+      isSubEnabled, setSubEnabled, SUB_EVENT, PUSH_OPT_IN_UI,
     } from "../js/pushSubs.js";
 
     applySavedTheme();
@@ -878,6 +878,11 @@
       const box = document.getElementById("notifyResult");
       const u = auth && auth.currentUser;
       if (!row || !box) return;
+      // Push opt-in oculto hasta Blaze / Functions
+      if (!PUSH_OPT_IN_UI) {
+        row.hidden = true;
+        return;
+      }
       if (!isGoogle(u) || !eventId || !db) {
         row.hidden = true;
         return;

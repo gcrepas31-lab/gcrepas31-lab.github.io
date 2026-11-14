@@ -86,7 +86,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { applySavedTheme } from "../js/profile.js";
     import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
-    import { isSubEnabled, setSubEnabled, SUB_LEAGUE } from "../js/pushSubs.js";
+    import { isSubEnabled, setSubEnabled, SUB_LEAGUE, PUSH_OPT_IN_UI } from "../js/pushSubs.js";
 
     applySavedTheme();
     applyBackButton(document.querySelector(".back-btn"), {
@@ -109,6 +109,11 @@
       const row = document.getElementById("notifyRow");
       const box = document.getElementById("notifyLeague");
       if (!row || !box) return;
+      // Push opt-in oculto hasta Blaze / Functions
+      if (!PUSH_OPT_IN_UI) {
+        row.hidden = true;
+        return;
+      }
       if (!uid || !db || !id) {
         row.hidden = true;
         return;
