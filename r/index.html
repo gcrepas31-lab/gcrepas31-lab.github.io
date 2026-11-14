@@ -85,8 +85,13 @@
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { applySavedTheme } from "../js/profile.js";
     import { tipoFixtureLabel } from "../js/eventLabels.js";
+    import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
 
     applySavedTheme();
+    applyBackButton(document.querySelector(".back-btn"), {
+      fallbackHref: "../eventos/#jugados",
+      fallbackLabel: "Jugados",
+    });
     const id = new URLSearchParams(location.search).get("id");
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";

@@ -313,6 +313,7 @@
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
     import { modalityLabelForEvent } from "../js/eventLabels.js";
+    import { hrefWithReturn } from "../js/navBack.js";
 
     applySavedTheme();
 
@@ -501,7 +502,7 @@
       const place = placeLine(ev);
       const a = document.createElement("a");
       a.className = "card-link";
-      a.href = "../e/?id=" + encodeURIComponent(ev.id);
+      a.href = hrefWithReturn("../e/?id=" + encodeURIComponent(ev.id));
       const ownerBadge = opts.ownerBadge
         ? '<span class="chip soft">' + escapeHtml(opts.ownerBadge) + "</span>"
         : "";
@@ -528,7 +529,7 @@
         actions.className = "card-actions";
         const open = document.createElement("a");
         open.className = "btn-sm";
-        open.href = "../e/?id=" + encodeURIComponent(ev.id);
+        open.href = hrefWithReturn("../e/?id=" + encodeURIComponent(ev.id));
         open.textContent = "Ver";
         const leave = document.createElement("button");
         leave.type = "button";
@@ -714,7 +715,7 @@
       wrap.className = "card-wrap";
       const a = document.createElement("a");
       a.className = "card-link";
-      a.href = "../l/?id=" + encodeURIComponent(ev.id || ev.serieId);
+      a.href = hrefWithReturn("../l/?id=" + encodeURIComponent(ev.id || ev.serieId));
       const top = Array.isArray(ev.ranking) && ev.ranking[0]
         ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
         : "";
@@ -735,7 +736,7 @@
       wrap.className = "card-wrap";
       const a = document.createElement("a");
       a.className = "card-link";
-      a.href = "../r/?id=" + encodeURIComponent(ev.id);
+      a.href = hrefWithReturn("../r/?id=" + encodeURIComponent(ev.id));
       const whenTxt = ev.fechaEpochMs
         ? new Date(ev.fechaEpochMs).toLocaleString("es", {
             weekday: "short", day: "numeric", month: "short",

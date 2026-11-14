@@ -71,8 +71,13 @@
       getFirestore, doc, getDoc, collection, query, where, getDocs,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { applySavedTheme } from "../js/profile.js";
+    import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
 
     applySavedTheme();
+    applyBackButton(document.querySelector(".back-btn"), {
+      fallbackHref: "../eventos/#ligas",
+      fallbackLabel: "Ligas",
+    });
     const id = new URLSearchParams(location.search).get("id");
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";
@@ -116,7 +121,7 @@
         evSnap.forEach((e) => events.push({ id: e.id, ...e.data() }));
         events.sort((a, b) => (b.jornada || 0) - (a.jornada || 0));
         const evHtml = events.map((e) =>
-          `<a href="../r/?id=${encodeURIComponent(e.id)}">` +
+          `<a href="${esc(hrefWithReturn("../r/?id=" + encodeURIComponent(e.id)))}">` +
           (e.jornada ? `J${esc(e.jornada)} · ` : "") +
           `${esc(e.title || "Evento")}</a>`
         ).join("");

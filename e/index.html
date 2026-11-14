@@ -337,8 +337,13 @@
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
     import { modalityLabelFromKey } from "../js/eventLabels.js";
+    import { applyBackButton, hrefWithReturn } from "../js/navBack.js";
 
     applySavedTheme();
+    applyBackButton(document.querySelector(".back-btn"), {
+      fallbackHref: "../eventos/#abiertos",
+      fallbackLabel: "Eventos",
+    });
 
     const params = new URLSearchParams(location.search);
     let eventId = params.get("id");
@@ -481,7 +486,7 @@
           podium.innerHTML = "";
         }
         resultBtn.hidden = false;
-        resultBtn.href = "../r/?id=" + encodeURIComponent(resultState.id);
+        resultBtn.href = hrefWithReturn("../r/?id=" + encodeURIComponent(resultState.id));
         bits.push("Clasificación disponible");
       } else {
         document.getElementById("finishedLabel").textContent = "Evento finalizado";
@@ -680,7 +685,9 @@
           primaryBtn.className = "btn";
           primaryBtn.textContent = "Ver clasificación";
           primaryBtn.onclick = () => {
-            location.href = "../r/?id=" + encodeURIComponent(resultState.id);
+            location.href = hrefWithReturn(
+              "../r/?id=" + encodeURIComponent(resultState.id),
+            );
           };
         }
         return;
