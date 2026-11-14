@@ -114,7 +114,7 @@
     }
 
     .roster {
-      margin-top: 22px; padding: 16px 14px 14px;
+      margin-top: 14px; padding: 16px 14px 14px;
       border: 1px solid var(--line); border-radius: 14px;
       background: rgba(0, 0, 0, .14);
     }
@@ -125,22 +125,38 @@
     }
     .roster h3 { margin: 0; font-size: 1rem; font-weight: 800; }
     .roster-count { color: var(--muted); font-size: .82rem; font-weight: 600; }
-    .roster ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .roster ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
     .roster-row {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 12px;
+      padding: 14px 14px; border-radius: 12px;
       background: rgba(255, 255, 255, .04); border: 1px solid var(--line);
     }
     [data-theme="light"] .roster-row { background: #fff; }
+    .roster-row.wait {
+      border-style: dashed; opacity: .95;
+      background: rgba(255, 210, 122, .08);
+    }
+    [data-theme="light"] .roster-row.wait { background: rgba(255, 210, 122, .16); }
     .roster-av {
       width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
       background: linear-gradient(135deg, #2a6b45, var(--accent));
       color: #0b1f2e; font-weight: 800; font-size: .9rem;
       display: grid; place-items: center;
     }
-    .roster-name { font-size: .98rem; font-weight: 650; color: var(--text); line-height: 1.3; }
+    .roster-row.wait .roster-av {
+      background: linear-gradient(135deg, #b86e00, #ffd27a);
+      color: #3a2200;
+    }
+    .roster-name { font-size: .98rem; font-weight: 650; color: var(--text); line-height: 1.35; }
     .roster-num { color: var(--muted); font-size: .75rem; font-weight: 600; margin-right: 2px; }
-    #rosterWait { margin: 12px 0 0; font-size: .85rem; }
+    .roster-tag {
+      margin-left: auto; font-size: .72rem; font-weight: 800; letter-spacing: .02em;
+      color: #ffd27a; text-transform: uppercase;
+    }
+    [data-theme="light"] .roster-tag { color: #b86e00; }
+    .roster-section {
+      margin: 16px 0 0; font-size: .88rem; font-weight: 800; color: var(--muted);
+    }
 
     .finished {
       margin-top: 18px; padding: 16px 14px; border-radius: 14px;
@@ -163,10 +179,14 @@
     .finished .btn { margin-top: 4px; }
 
     .action {
-      margin-top: 22px; padding: 18px 16px; border-radius: 14px;
-      background: #0e2a40; border: 1px solid var(--line); text-align: center;
+      margin-top: 16px; padding: 14px 12px; border-radius: 14px;
+      background: transparent; border: none; text-align: center;
     }
-    [data-theme="light"] .action { background: #f3f7fb; }
+    .action.panel {
+      padding: 16px 14px; border: 1px solid var(--line);
+      background: #0e2a40;
+    }
+    [data-theme="light"] .action.panel { background: #f3f7fb; }
     .action .status {
       margin: 0 0 6px; font-weight: 700; color: var(--accent); font-size: 1.05rem;
     }
@@ -180,18 +200,27 @@
       background: var(--bg); color: var(--text); font-size: 1rem;
     }
     .nick-hint { margin: 6px 0 0; font-size: .78rem; color: var(--muted); line-height: 1.35; }
+    .action-row {
+      display: flex; gap: 10px; align-items: stretch;
+    }
+    .action-row .btn { flex: 1; min-width: 0; }
+    .action-row .btn + .btn { margin-top: 0; }
 
     .btn {
       display: block; width: 100%; margin: 0; text-align: center; border: none;
       background: var(--accent); color: #0b1f2e; font-weight: 700;
-      padding: 14px 18px; border-radius: 999px; cursor: pointer; font-size: 1rem;
-      text-decoration: none;
+      padding: 14px 14px; border-radius: 999px; cursor: pointer; font-size: .95rem;
+      text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .btn:disabled { opacity: .55; cursor: not-allowed; }
     .btn-google { background: #fff; color: #1f1f1f; }
+    .btn-outline {
+      background: transparent; color: var(--text); border: 1px solid var(--line);
+    }
+    .btn-outline:disabled { color: var(--muted); }
     .btn-ghost {
       background: transparent; color: var(--danger); border: 1px solid var(--danger);
-      margin-top: 10px;
+      margin-top: 0;
     }
     .footer {
       margin-top: 16px; text-align: center;
@@ -249,16 +278,7 @@
           <a class="btn" id="resultBtn" hidden href="#">Ver clasificación completa</a>
         </div>
 
-        <div class="roster" id="rosterBox" hidden>
-          <div class="roster-head">
-            <h3 id="rosterTitle">Inscriptos</h3>
-            <span class="roster-count" id="rosterCount"></span>
-          </div>
-          <ul id="rosterList"></ul>
-          <p class="meta" id="rosterWait" hidden></p>
-        </div>
-
-        <!-- Una sola zona de acción según estado -->
+        <!-- Acciones rápidas: entre ficha y lista (como en la app) -->
         <div class="action" id="action">
           <p class="status" id="actionTitle">…</p>
           <p class="sub" id="actionSub"></p>
@@ -270,13 +290,25 @@
               La cuenta se identifica por tu email. El nick es solo cómo aparecés en este evento.
             </p>
           </div>
-          <button type="button" class="btn" id="primaryBtn" hidden></button>
+          <div class="action-row" id="actionRow">
+            <button type="button" class="btn" id="primaryBtn" hidden></button>
+            <button type="button" class="btn btn-outline" id="leaveBtn" hidden>Darme de baja</button>
+          </div>
           <button type="button" class="btn btn-secondary" id="saveNickBtn" hidden
                   style="margin-top:10px;background:transparent;color:var(--accent);border:1px solid var(--accent)">
             Guardar nombre en la lista
           </button>
-          <button type="button" class="btn btn-ghost" id="leaveBtn" hidden>Borrarme del evento</button>
           <p class="msg" id="msg" hidden></p>
+        </div>
+
+        <div class="roster" id="rosterBox" hidden>
+          <div class="roster-head">
+            <h3 id="rosterTitle">Inscriptos</h3>
+            <span class="roster-count" id="rosterCount"></span>
+          </div>
+          <ul id="rosterList"></ul>
+          <p class="roster-section" id="waitTitle" hidden>Reservas</p>
+          <ul id="waitList"></ul>
         </div>
 
         <div class="footer" style="display:flex;flex-direction:column;gap:10px;align-items:center">
@@ -541,18 +573,54 @@
       fillFinishedBox(s);
     }
 
+    function appendRosterRow(listEl, s, index, opts) {
+      const name = (s.displayName || "Jugador").trim() || "Jugador";
+      const li = document.createElement("li");
+      li.className = "roster-row" + (opts && opts.wait ? " wait" : "");
+      const av = document.createElement("div");
+      av.className = "roster-av";
+      av.textContent = name.charAt(0).toUpperCase();
+      const info = document.createElement("div");
+      const nm = document.createElement("div");
+      nm.className = "roster-name";
+      if (!(opts && opts.wait)) {
+        const num = document.createElement("span");
+        num.className = "roster-num";
+        num.textContent = "#" + (index + 1);
+        nm.appendChild(num);
+        nm.appendChild(document.createTextNode(" " + name));
+      } else {
+        nm.textContent = name;
+      }
+      info.appendChild(nm);
+      li.appendChild(av);
+      li.appendChild(info);
+      if (opts && opts.wait) {
+        const tag = document.createElement("span");
+        tag.className = "roster-tag";
+        tag.textContent = "Reserva";
+        li.appendChild(tag);
+      }
+      listEl.appendChild(li);
+    }
+
     function renderRoster(signups) {
       const confirmed = signups
         .filter((s) => s.status !== "waitlist")
         .sort((a, b) => (a.joinedAtEpochMs || 0) - (b.joinedAtEpochMs || 0));
-      const wait = signups.filter((s) => s.status === "waitlist").length;
+      const waitlist = signups
+        .filter((s) => s.status === "waitlist")
+        .sort((a, b) => (a.joinedAtEpochMs || 0) - (b.joinedAtEpochMs || 0));
       const box = document.getElementById("rosterBox");
       const list = document.getElementById("rosterList");
-      const waitEl = document.getElementById("rosterWait");
+      const waitList = document.getElementById("waitList");
+      const waitTitle = document.getElementById("waitTitle");
       const countEl = document.getElementById("rosterCount");
       list.innerHTML = "";
-      if (!confirmed.length && !wait) {
+      waitList.innerHTML = "";
+      if (!confirmed.length && !waitlist.length) {
         box.hidden = true;
+        waitTitle.hidden = true;
         return;
       }
       box.hidden = false;
@@ -560,44 +628,35 @@
       countEl.textContent = cap
         ? confirmed.length + " / " + cap
         : String(confirmed.length);
-      confirmed.forEach((s, i) => {
-        const name = (s.displayName || "Jugador").trim() || "Jugador";
-        const li = document.createElement("li");
-        li.className = "roster-row";
-        const av = document.createElement("div");
-        av.className = "roster-av";
-        av.textContent = name.charAt(0).toUpperCase();
-        const info = document.createElement("div");
-        const num = document.createElement("span");
-        num.className = "roster-num";
-        num.textContent = "#" + (i + 1);
-        const nm = document.createElement("div");
-        nm.className = "roster-name";
-        nm.appendChild(num);
-        nm.appendChild(document.createTextNode(" " + name));
-        info.appendChild(nm);
-        li.appendChild(av);
-        li.appendChild(info);
-        list.appendChild(li);
-      });
+      confirmed.forEach((s, i) => appendRosterRow(list, s, i, null));
       const closed = eventState && eventState.status !== "open";
-      if (!closed && wait > 0) {
-        waitEl.hidden = false;
-        waitEl.textContent = "+" + wait + " en lista de espera";
-      } else waitEl.hidden = true;
+      if (!closed && waitlist.length) {
+        waitTitle.hidden = false;
+        waitTitle.textContent = "Reservas (" + waitlist.length + ")";
+        waitlist.forEach((s, i) => appendRosterRow(waitList, s, i, { wait: true }));
+      } else {
+        waitTitle.hidden = true;
+      }
     }
 
     function renderAction() {
       const u = auth && auth.currentUser;
       const google = isGoogle(u);
       const open = eventState && eventState.status === "open";
+      const actionEl = document.getElementById("action");
+      const actionRow = document.getElementById("actionRow");
       showMsg("", false);
       leaveBtn.hidden = true;
+      leaveBtn.disabled = true;
       saveNickBtn.hidden = true;
       nickWrap.hidden = true;
       primaryBtn.hidden = true;
+      primaryBtn.disabled = false;
       primaryBtn.onclick = null;
       primaryBtn.className = "btn";
+      actionEl.classList.remove("panel");
+      actionTitle.hidden = false;
+      actionSub.hidden = false;
 
       const nav = document.getElementById("navUser");
       if (google) {
@@ -611,6 +670,7 @@
       }
 
       if (!open) {
+        actionEl.classList.add("panel");
         actionTitle.textContent = "Evento finalizado";
         actionSub.textContent = resultState
           ? "Ya se jugó. Abajo tenés el podio y el enlace a la clasificación completa."
@@ -627,6 +687,7 @@
       }
 
       if (!google) {
+        actionEl.classList.add("panel");
         actionTitle.textContent = "Entrá para inscribirte";
         actionSub.textContent = "Con Google quedás logueado. Después elegís el nick de la lista.";
         primaryBtn.hidden = false;
@@ -636,6 +697,13 @@
         return;
       }
 
+      // Como en la app: Inscribirme | Darme de baja uno al lado del otro
+      leaveBtn.hidden = false;
+      leaveBtn.className = "btn btn-outline";
+      leaveBtn.textContent = "Darme de baja";
+      primaryBtn.hidden = false;
+      primaryBtn.className = "btn";
+
       if (myStatus) {
         const nick = (window.__mineDisplayName || "").trim();
         actionTitle.textContent =
@@ -643,18 +711,25 @@
         actionSub.textContent = nick
           ? "En la lista: " + nick
           : "Cuenta: " + (u.email || "");
-        leaveBtn.hidden = false;
+        nickWrap.hidden = true;
+        primaryBtn.disabled = true;
+        primaryBtn.textContent =
+          myStatus === "waitlist" ? "En reserva" : "Inscripto";
+        leaveBtn.disabled = false;
+        leaveBtn.className = "btn btn-ghost";
         return;
       }
 
+      const full = eventState && eventState.joined >= eventState.capacity;
       actionTitle.textContent = "¿Te sumás?";
       actionSub.textContent = "Elegí el nombre con el que querés aparecer en la lista.";
       nickWrap.hidden = false;
       fillNickDefault(u, "");
-      primaryBtn.hidden = false;
-      primaryBtn.className = "btn";
-      primaryBtn.textContent = "Inscribirme";
+      primaryBtn.disabled = false;
+      primaryBtn.textContent = full ? "Apuntarme (reserva)" : "Inscribirme";
       primaryBtn.onclick = () => joinEvent();
+      leaveBtn.disabled = true;
+      leaveBtn.className = "btn btn-outline";
     }
 
     async function finishRedirect() {
