@@ -558,7 +558,7 @@
     }
 
     async function myOpenSignupIds(uid) {
-      const items = mineOpen(await loadMine(uid));
+      const items = await mineOpen(await loadMine(uid));
       return new Set(items.map((e) => e.id));
     }
 
@@ -630,6 +630,31 @@
       }
     }
 
+    async function eventAlreadyHasResult(ev) {
+      try {
+        const lid = (ev.localEventoId || "").trim();
+        if (lid) {
+          const r = await getDoc(doc(db, "event_results", lid));
+          if (r.exists()) return true;
+        }
+        const title = String(ev.title || "").trim();
+        if (!title) return false;
+        const snap = await getDocs(query(
+          collection(db, "event_results"),
+          where("title", "==", title),
+        ));
+        if (snap.empty) return false;
+        const serieId = (ev.serieId || "").trim();
+        return snap.docs.some((d) => {
+          const rSerie = String((d.data() || {}).serieId || "").trim();
+          return !serieId || !rSerie || rSerie === serieId;
+        });
+      } catch (e) {
+        console.warn("eventAlreadyHasResult", ev.id, e);
+        return false;
+      }
+    }
+
     async function loadOpen() {
       const q = query(
         collection(db, "open_events"),
@@ -638,12 +663,25 @@
       );
       const snap = await getDocs(q);
       const list = [];
-      snap.forEach((d) => {
+      const uid = auth && auth.currentUser && auth.currentUser.uid;
+      for (const d of snap.docs) {
         const data = d.data() || {};
         // Filtro extra: en iOS a veces llega respuesta vieja / mezclada
-        if ((data.status || "open") !== "open") return;
-        list.push({ id: d.id, ...data });
-      });
+        if ((data.status || "open") !== "open") continue;
+        const ev = { id: d.id, ...data };
+        // Ya hay resultado publicado → no mostrar en Abiertos; cerrar si soy dueño
+        if (await eventAlreadyHasResult(ev)) {
+          if (uid && ev.ownerUid === uid) {
+            try {
+              await updateDoc(doc(db, "open_events", ev.id), { status: "closed" });
+            } catch (e) {
+              console.warn("auto-close open_event", ev.id, e);
+            }
+          }
+          continue;
+        }
+        list.push(ev);
+      }
       return list;
     }
 
@@ -667,9 +705,25 @@
       return items;
     }
 
-    /** Inscripciones activas (evento todavía open). */
-    function mineOpen(items) {
-      return items.filter((ev) => (ev.status || "open") === "open");
+    /** Inscripciones activas (evento todavía open y sin resultado publicado). */
+    async function mineOpen(items) {
+      const out = [];
+      const uid = auth && auth.currentUser && auth.currentUser.uid;
+      for (const ev of items) {
+        if ((ev.status || "open") !== "open") continue;
+        if (await eventAlreadyHasResult(ev)) {
+          if (uid && ev.ownerUid === uid) {
+            try {
+              await updateDoc(doc(db, "open_events", ev.id), { status: "closed" });
+            } catch (e) {
+              console.warn("auto-close mineOpen", ev.id, e);
+            }
+          }
+          continue;
+        }
+        out.push(ev);
+      }
+      return out;
     }
 
     /** Ya jugados / lista cerrada al iniciar (status closed). */
