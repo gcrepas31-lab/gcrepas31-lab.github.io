@@ -12,6 +12,7 @@
   <meta name="description" content="Inscripciones abiertas FixtureGo Padel." />
   <link rel="icon" href="../logo-fixturego.jpg" type="image/jpeg" />
   <link rel="apple-touch-icon" href="../logo-fixturego.jpg" />
+  <link rel="stylesheet" href="../css/brand-hero.css?v=2" />
   <style>
     :root, [data-theme="dark"] {
       --bg: #0b1f2e;
@@ -54,26 +55,12 @@
       min-height: 72vh; display: flex; flex-direction: column;
       justify-content: center; text-align: center; padding: 12px 4px;
     }
-    .gate .brand {
-      width: 88px; height: 88px; border-radius: 20px; object-fit: cover;
-      margin: 0 auto 18px; background: var(--card);
-      box-shadow: 0 12px 28px rgba(0,0,0,.28);
-    }
-    .gate h1 { font-size: 1.8rem; margin: 0 0 10px; letter-spacing: -.02em; }
     .gate p { color: var(--muted); margin: 0 0 22px; line-height: 1.45; font-size: 1rem; }
     .gate .hint { margin-top: 14px; font-size: .85rem; color: var(--muted); }
     .soon {
       margin-top: 18px; padding: 12px; border-radius: 12px;
       border: 1px dashed var(--line); color: var(--muted); font-size: .82rem;
     }
-
-    .brand-bar {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
-    }
-    .brand-bar img {
-      width: 40px; height: 40px; border-radius: 10px; object-fit: cover;
-    }
-    .brand-bar strong { font-size: 1.05rem; }
 
     .profile {
       display: flex; align-items: center; gap: 12px;
@@ -224,9 +211,11 @@
 <body>
   <div class="wrap">
     <section id="gate" class="gate" hidden>
-      <img class="brand" src="../logo-fixturego.jpg" alt="FixtureGo"
-           onerror="this.style.display='none'" />
-      <h1>FixtureGo</h1>
+      <header class="brand-hero" aria-label="FixtureGo Padel Americanas">
+        <p class="brand-hero__title">Fixture<span class="brand-hero__go">Go</span></p>
+        <p class="brand-hero__padel">PADEL</p>
+        <p class="brand-hero__mode">Americanas</p>
+      </header>
       <p>Entrá para ver eventos abiertos e inscribirte en un clic.</p>
       <button type="button" class="btn btn-google" id="googleBtn">Continuar con Google</button>
       <div class="soon">
@@ -238,10 +227,11 @@
     </section>
 
     <section id="app" hidden>
-      <div class="brand-bar">
-        <img src="../logo-fixturego.jpg" alt="" onerror="this.style.display='none'" />
-        <strong>FixtureGo</strong>
-      </div>
+      <header class="brand-hero brand-hero--compact" aria-label="FixtureGo Padel Americanas">
+        <p class="brand-hero__title">Fixture<span class="brand-hero__go">Go</span></p>
+        <p class="brand-hero__padel">PADEL</p>
+        <p class="brand-hero__mode">Americanas</p>
+      </header>
 
       <div class="profile">
         <div class="avatar" id="avatar">G</div>

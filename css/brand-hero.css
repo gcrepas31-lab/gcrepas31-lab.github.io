@@ -1,0 +1,79 @@
+/* Wordmark FixtureGo · PADEL · AMERICANAS (alineado al menú de la app) */
+.brand-hero {
+  --fg-go: #5ec8f0;
+  --fg-line: #8ad4f0;
+  text-align: center;
+  margin: 0 auto 18px;
+  max-width: 420px;
+  padding: 4px 8px 2px;
+}
+
+/* Cabecera logueada: mismo sitio que logo+nombre, poca altura extra */
+.brand-hero--compact {
+  margin: 0 auto 12px;
+  padding: 0;
+  max-width: 280px;
+}
+.brand-hero__title {
+  margin: 0;
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--text, #f4f7fb);
+}
+.brand-hero--compact .brand-hero__title {
+  font-size: 1.28rem;
+  line-height: 1.1;
+}
+.brand-hero__go {
+  color: var(--fg-go);
+}
+.brand-hero__padel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text, #f4f7fb);
+}
+.brand-hero--compact .brand-hero__padel {
+  margin-top: 3px;
+  gap: 8px;
+  font-size: 0.62rem;
+}
+.brand-hero__padel::before,
+.brand-hero__padel::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--fg-line));
+}
+.brand-hero__padel::after {
+  background: linear-gradient(90deg, var(--fg-line), transparent);
+}
+.brand-hero__mode {
+  margin: 10px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  color: var(--text, #f4f7fb);
+  text-transform: uppercase;
+}
+.brand-hero--compact .brand-hero__mode {
+  margin-top: 2px;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+}
+
+[data-theme="light"] .brand-hero__go {
+  color: #1a8fb8;
+}
+[data-theme="light"] .brand-hero__padel::before,
+[data-theme="light"] .brand-hero__padel::after {
+  --fg-line: #5aa8c8;
+}
