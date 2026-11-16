@@ -319,11 +319,6 @@
           <ul id="waitList"></ul>
         </div>
 
-        <div class="notify-row" id="notifyRow" hidden>
-          <span>Avisarme cuando publiquen el resultado (en la app)</span>
-          <input type="checkbox" id="notifyResult" />
-        </div>
-
         <div class="footer" style="display:flex;flex-direction:column;gap:10px;align-items:center">
           <button type="button" class="linkish" id="shareBtn" style="color:var(--accent);font-weight:700">
             Compartir por WhatsApp
@@ -870,8 +865,6 @@
         }
       }
       renderAction();
-      const notifyRow = document.getElementById("notifyRow");
-      if (notifyRow) notifyRow.hidden = true;
     }
 
     async function joinEvent() {

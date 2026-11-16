@@ -70,10 +70,6 @@
     <p><a class="back-btn" href="../eventos/#ligas"><span class="arrow" aria-hidden="true">←</span> Ligas</a></p>
     <div id="loading" class="loading">Cargando liga…</div>
     <p id="err" class="err" hidden>No encontramos esta liga.</p>
-    <div class="notify-row" id="notifyRow" hidden>
-      <span>Avisarme cuando actualicen esta liga (en la app)</span>
-      <input type="checkbox" id="notifyLeague" />
-    </div>
     <div id="card" class="card" hidden></div>
   </div>
   <script type="module">
@@ -152,8 +148,6 @@
           </tr></thead><tbody>${rows}</tbody></table></div>` +
           (evHtml ? `<h2>Eventos</h2><div class="events">${evHtml}</div>` : "");
 
-        const notifyRow = document.getElementById("notifyRow");
-        if (notifyRow) notifyRow.hidden = true;
       }
     }
   </script>
