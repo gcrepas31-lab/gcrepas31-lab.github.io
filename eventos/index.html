@@ -88,16 +88,32 @@
       font-size: .8rem; text-decoration: underline; padding: 2px 0; white-space: nowrap;
     }
 
+    .tabs-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
     .tabs {
-      display: flex; gap: 6px; margin-bottom: 14px;
+      display: flex; gap: 6px;
       background: rgba(0,0,0,.12); border-radius: 999px; padding: 4px;
     }
     .tab {
-      flex: 1; padding: 10px 4px; border: none; border-radius: 999px;
+      flex: 1; padding: 9px 4px; border: none; border-radius: 999px;
       background: transparent; color: var(--muted); font-weight: 700;
-      cursor: pointer; font-size: .72rem;
+      cursor: pointer; font-size: .7rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
     }
     .tab.active { background: var(--accent); color: var(--on-accent); }
+    .tab-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 1.15rem; height: 1.15rem; padding: 0 5px;
+      border-radius: 999px; font-size: .62rem; font-weight: 800;
+      background: var(--warn, #ffd27a); color: #0b1f2e; line-height: 1;
+    }
+    .tab-count.dot {
+      min-width: 8px; width: 8px; height: 8px; padding: 0;
+      background: var(--accent); color: transparent; font-size: 0;
+    }
+    .tab.active .tab-count {
+      background: rgba(0,0,0,.28); color: var(--on-accent);
+    }
+    .tab.active .tab-count.dot { background: rgba(0,0,0,.35); }
 
     .card-wrap {
       background: var(--card); border-radius: 16px; padding: 14px 16px;
@@ -256,13 +272,17 @@
         </div>
       </div>
 
-      <div class="tabs">
-        <button type="button" class="tab active" id="tabOpen">Abiertos</button>
-        <button type="button" class="tab" id="tabMine">Mis insc.</button>
-        <button type="button" class="tab" id="tabLive">En vivo</button>
-        <button type="button" class="tab" id="tabPlayed">Jugados</button>
-        <button type="button" class="tab" id="tabLeagues">Ligas</button>
-        <button type="button" class="tab" id="tabDatos">Mis datos</button>
+      <div class="tabs-wrap">
+        <div class="tabs">
+          <button type="button" class="tab active" id="tabOpen">Abiertos<span class="tab-count" id="countOpen" hidden></span></button>
+          <button type="button" class="tab" id="tabMine">Mis insc.<span class="tab-count" id="countMine" hidden></span></button>
+          <button type="button" class="tab" id="tabLive">En vivo<span class="tab-count" id="countLive" hidden></span></button>
+        </div>
+        <div class="tabs">
+          <button type="button" class="tab" id="tabPlayed">Jugados<span class="tab-count" id="countPlayed" hidden></span></button>
+          <button type="button" class="tab" id="tabLeagues">Ligas<span class="tab-count" id="countLeagues" hidden></span></button>
+          <button type="button" class="tab" id="tabDatos">Mis datos<span class="tab-count" id="countDatos" hidden></span></button>
+        </div>
       </div>
 
       <div id="list" class="loading">Cargando…</div>
@@ -857,6 +877,86 @@
       return seq === refreshSeq && tab === expectedTab;
     }
 
+    const SEEN_PLAYED_KEY = "fg_seen_played_ms";
+    const SEEN_LEAGUES_KEY = "fg_seen_leagues_ms";
+
+    function getSeenMs(key) {
+      const n = Number(localStorage.getItem(key) || 0);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+    function markSeenMs(key, maxMs) {
+      const prev = getSeenMs(key);
+      const next = Math.max(prev, Number(maxMs) || Date.now());
+      localStorage.setItem(key, String(next));
+    }
+    function resultStamp(ev) {
+      return Number(ev.publishedAtEpochMs || ev.fechaEpochMs || 0) || 0;
+    }
+    function leagueStamp(ev) {
+      return Number(ev.publishedAtEpochMs || ev.ultimoEventoFechaEpochMs || 0) || 0;
+    }
+    function paintTabCount(id, n, opts) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const count = Number(n) || 0;
+      if (count <= 0) {
+        el.hidden = true;
+        el.textContent = "";
+        el.classList.remove("dot");
+        return;
+      }
+      el.hidden = false;
+      if (opts && opts.dotOnly) {
+        el.classList.add("dot");
+        el.textContent = "";
+        el.title = String(count);
+      } else {
+        el.classList.remove("dot");
+        el.textContent = count > 99 ? "99+" : String(count);
+        el.title = "";
+      }
+    }
+
+    /** Counts para badges de pestañas (reusa queries existentes). */
+    async function refreshTabBadges() {
+      if (!auth || !auth.currentUser || !db) return;
+      const uid = auth.currentUser.uid;
+      const email = (auth.currentUser.email || "").trim().toLowerCase();
+      try {
+        const [openList, mineItems, liveList, resultsRaw, leagues] = await Promise.all([
+          loadOpen().catch(() => []),
+          loadMine(uid).then(mineOpen).catch(() => []),
+          loadLiveResults().catch(() => []),
+          email ? loadMyResults(email).catch(() => []) : Promise.resolve([]),
+          email ? loadMyLeagues(email).catch(() => []) : Promise.resolve([]),
+        ]);
+        const finals = (resultsRaw || []).filter((ev) => isFinalResult(ev));
+        // Primera visita: baseline sin badge histórico
+        if (!localStorage.getItem(SEEN_PLAYED_KEY)) {
+          const maxP = finals.reduce((m, ev) => Math.max(m, resultStamp(ev)), Date.now());
+          markSeenMs(SEEN_PLAYED_KEY, maxP);
+        }
+        if (!localStorage.getItem(SEEN_LEAGUES_KEY)) {
+          const maxL = (leagues || []).reduce((m, ev) => Math.max(m, leagueStamp(ev)), Date.now());
+          markSeenMs(SEEN_LEAGUES_KEY, maxL);
+        }
+        const seenPlayed = getSeenMs(SEEN_PLAYED_KEY);
+        const unseenPlayed = finals.filter((ev) => resultStamp(ev) > seenPlayed).length;
+        const seenLeagues = getSeenMs(SEEN_LEAGUES_KEY);
+        const unseenLeagues = (leagues || []).filter((ev) => leagueStamp(ev) > seenLeagues).length;
+
+        paintTabCount("countOpen", openList.length);
+        paintTabCount("countMine", mineItems.length);
+        paintTabCount("countLive", liveList.length);
+        paintTabCount("countPlayed", unseenPlayed);
+        // Ligas: solo si hay publicación más nueva que la última visita; Mis datos: sin inventar
+        paintTabCount("countLeagues", unseenLeagues);
+        paintTabCount("countDatos", 0);
+      } catch (e) {
+        console.warn("refreshTabBadges", e);
+      }
+    }
+
     function paintOpenList(list, leagueMap, joinedIds) {
       listEl.className = "";
       listEl.innerHTML = "";
@@ -884,6 +984,7 @@
         listEl.hidden = true;
         datosEl.hidden = false;
         renderNickDatosUI();
+        refreshTabBadges().catch(() => {});
         return;
       }
       listEl.hidden = false;
@@ -948,6 +1049,8 @@
             listEl.className = "empty";
             listEl.textContent =
               "Pedile al organizador que publique la liga en la web (ícono nube en el ranking), con tu email en Gestión de jugadores.";
+            markSeenMs(SEEN_PLAYED_KEY, Date.now());
+            paintTabCount("countPlayed", 0);
             return;
           }
           results.forEach((ev) => listEl.appendChild(resultCard(ev)));
@@ -956,6 +1059,9 @@
             if (results.some((r) => r.id === ev.id || r.title === ev.title)) return;
             listEl.appendChild(eventCard(ev, { badge: "Cerrado", canLeave: false }));
           });
+          const maxStamp = results.reduce((m, ev) => Math.max(m, resultStamp(ev)), Date.now());
+          markSeenMs(SEEN_PLAYED_KEY, maxStamp);
+          paintTabCount("countPlayed", 0);
         } else if (expectedTab === "leagues") {
           const email = (auth.currentUser.email || "").trim().toLowerCase();
           const list = email ? await loadMyLeagues(email) : [];
@@ -966,9 +1072,14 @@
             listEl.className = "empty";
             listEl.textContent =
               "Todavía no hay ligas publicadas para tu email. En la app: ranking de la liga → nube (Publicar en la web).";
+            markSeenMs(SEEN_LEAGUES_KEY, Date.now());
+            paintTabCount("countLeagues", 0);
             return;
           }
           list.forEach((ev) => listEl.appendChild(leagueCard(ev)));
+          const maxStamp = list.reduce((m, ev) => Math.max(m, leagueStamp(ev)), Date.now());
+          markSeenMs(SEEN_LEAGUES_KEY, maxStamp);
+          paintTabCount("countLeagues", 0);
         }
       } catch (e) {
         if (!stillCurrent(seq, expectedTab)) return;
@@ -982,6 +1093,10 @@
             "<br><br>Cuando diga Enabled, recargá.";
         } else {
           listEl.textContent = (e && e.message) || "Error al cargar.";
+        }
+      } finally {
+        if (stillCurrent(seq, expectedTab)) {
+          refreshTabBadges().catch(() => {});
         }
       }
     }
