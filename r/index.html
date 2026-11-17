@@ -70,11 +70,16 @@
     h1 { margin: 10px 0 6px; font-size: 1.35rem; font-weight: 800; }
     .meta { color: var(--muted); font-size: .9rem; margin: 3px 0; line-height: 1.4; }
     .updated { color: var(--accent); font-size: .82rem; font-weight: 650; margin: 8px 0 0; }
+    .timer {
+      margin: 10px 0 0; font-size: 1.15rem; font-weight: 800; color: var(--accent);
+      letter-spacing: .03em; font-variant-numeric: tabular-nums;
+    }
     h2 { margin: 22px 0 10px; font-size: 1.05rem; font-weight: 800; }
-    .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
-    table { width: 100%; border-collapse: collapse; font-size: .82rem; background: var(--table); }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid var(--line); }
+    table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: .82rem; background: var(--table); }
     th, td { padding: 8px 7px; text-align: left; white-space: nowrap; }
     th { color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--line); }
+    th.num, td.num { text-align: center; font-variant-numeric: tabular-nums; }
     tr:nth-child(even) td { background: rgba(255,255,255,.03); }
     tr.top td { background: rgba(245, 215, 110, .14); }
     td.pos { text-align: center; font-size: 1rem; min-width: 2.2rem; }
@@ -96,10 +101,19 @@
     }
     details.current .round-tag { color: var(--accent); }
     .match {
-      padding: 8px 14px 10px; border-top: 1px solid var(--line);
-      font-size: .86rem; color: var(--muted); line-height: 1.45;
+      padding: 10px 14px 12px; border-top: 1px solid var(--line);
+      font-size: .86rem; color: var(--muted); line-height: 1.35;
     }
-    .score { color: var(--text); font-weight: 700; }
+    .match-pista { font-size: .72rem; font-weight: 650; margin-bottom: 6px; color: var(--muted); }
+    .match-grid {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px 10px; align-items: center;
+    }
+    .team-a { text-align: right; color: var(--text); font-weight: 600; }
+    .team-b { text-align: left; color: var(--text); font-weight: 600; }
+    .score {
+      color: var(--text); font-weight: 800; text-align: center; min-width: 3.2rem;
+      font-variant-numeric: tabular-nums; font-size: .95rem;
+    }
     .score.pending { color: var(--muted); font-weight: 650; }
     .loading, .err { text-align: center; color: var(--muted); padding: 40px 12px; }
     .err { color: #ffb4a8; }
@@ -130,6 +144,8 @@
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";
     let lastPublishedAt = 0;
+    let lastTimerEnds = 0;
+    let lastTimerRunning = false;
     let tickTimer = null;
 
     function esc(s) {
@@ -169,20 +185,33 @@
       if (n === cur) return "current";
       return "pending";
     }
-    function scoreHtml(p) {
+    function scoreParts(p) {
       const played = p.played === true;
       const hasScore = p.hasScore === true || played ||
         Number(p.puntos1) > 0 || Number(p.puntos2) > 0;
       if (!hasScore) {
-        return `<span class="score pending"> — </span>`;
+        return { hasScore: false, html: `<span class="score pending">—</span>` };
       }
-      return `<span class="score"> ${esc(p.puntos1)} - ${esc(p.puntos2)} </span>`;
+      return {
+        hasScore: true,
+        html: `<span class="score">${esc(p.puntos1)} - ${esc(p.puntos2)}</span>`,
+      };
+    }
+    function formatTimer(endsAt, running) {
+      if (!running || !endsAt) return "";
+      const rem = Math.floor((endsAt - Date.now()) / 1000);
+      if (rem < 0) return "00:00";
+      const m = Math.floor(rem / 60);
+      const s = rem % 60;
+      return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
     }
     function renderCard(d) {
       const card = document.getElementById("card");
       card.hidden = false;
       const live = isLive(d);
       lastPublishedAt = Number(d.publishedAtEpochMs || 0);
+      lastTimerRunning = d.timerRunning === true;
+      lastTimerEnds = Number(d.timerEndsAtEpochMs || 0);
       const ranking = Array.isArray(d.ranking) ? d.ranking : [];
       const rounds = Array.isArray(d.rounds) ? d.rounds : [];
       const nJug = d.jugadoresCount || ranking.length;
@@ -196,20 +225,20 @@
         ? `${cur}/${total}`
         : (cur ? String(cur) : "");
 
-      const ptsHead = live ? "" : "<th>Pts</th>";
+      const ptsHead = live ? "" : `<th class="num">Pts</th>`;
       let rows = ranking.map((r) => {
         const pos = r.pos || 0;
-        const ptsCell = live ? "" : `<td><strong>${r.pts ?? "—"}</strong></td>`;
+        const ptsCell = live ? "" : `<td class="num"><strong>${r.pts ?? "—"}</strong></td>`;
         return `<tr class="${pos <= 3 ? "top" : ""}">
           <td class="pos">${posCell(pos)}</td>
           <td>${esc(r.nombre)}</td>
-          <td>${r.pj ?? "—"}</td>
-          <td>${r.g ?? "—"}</td>
-          <td>${r.e ?? "—"}</td>
-          <td>${r.p ?? "—"}</td>
-          <td>${r.pf ?? "—"}</td>
-          <td>${r.pc ?? "—"}</td>
-          <td>${r.dif ?? "—"}</td>
+          <td class="num">${r.pj ?? "—"}</td>
+          <td class="num">${r.g ?? "—"}</td>
+          <td class="num">${r.e ?? "—"}</td>
+          <td class="num">${r.p ?? "—"}</td>
+          <td class="num">${r.pf ?? "—"}</td>
+          <td class="num">${r.pc ?? "—"}</td>
+          <td class="num">${r.dif ?? "—"}</td>
           ${ptsCell}
         </tr>`;
       }).join("");
@@ -218,12 +247,17 @@
         const st = roundStatus(rd, d, live);
         const tag = st === "current" ? "En curso" : st === "done" ? "Jugada" : "Pendiente";
         const open = st === "current" || st === "done" ? " open" : "";
-        const matches = (rd.partidos || []).map((p) =>
-          `<div class="match">Pista ${esc(p.pista)} ·
-            ${esc((p.equipo1 || []).join(" - "))}
-            ${scoreHtml(p)}
-            ${esc((p.equipo2 || []).join(" - "))}</div>`
-        ).join("");
+        const matches = (rd.partidos || []).map((p) => {
+          const sc = scoreParts(p);
+          return `<div class="match">
+            <div class="match-pista">Pista ${esc(p.pista)}</div>
+            <div class="match-grid">
+              <div class="team-a">${esc((p.equipo1 || []).join(" - "))}</div>
+              ${sc.html}
+              <div class="team-b">${esc((p.equipo2 || []).join(" - "))}</div>
+            </div>
+          </div>`;
+        }).join("");
         const dot = (live && st === "current")
           ? `<span class="live-dot sm" aria-hidden="true"></span>`
           : "";
@@ -247,6 +281,10 @@
       const updated = lastPublishedAt
         ? `<p class="updated" id="updatedLine">${esc(updatedLabel(lastPublishedAt))}</p>`
         : "";
+      const timerTxt = formatTimer(lastTimerEnds, lastTimerRunning);
+      const timerHtml = timerTxt
+        ? `<p class="timer" id="timerLine">Cronómetro ${esc(timerTxt)}</p>`
+        : `<p class="timer" id="timerLine" hidden></p>`;
 
       card.innerHTML =
         chip +
@@ -255,10 +293,12 @@
         `<p class="meta">${when(d.fechaEpochMs)}</p>` +
         `<p class="meta">${metaTipo}</p>` +
         updated +
+        timerHtml +
         `<h2>${h2}</h2>` +
         `<div class="table-wrap"><table><thead><tr>
-          <th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
-          <th>PF</th><th>PC</th><th>DIF</th>${ptsHead}
+          <th>#</th><th>Jugador</th>
+          <th class="num">PJ</th><th class="num">G</th><th class="num">E</th><th class="num">P</th>
+          <th class="num">PF</th><th class="num">PC</th><th class="num">DIF</th>${ptsHead}
         </tr></thead><tbody>${rows}</tbody></table></div>` +
         (roundsHtml ? `<h2>Resultados por rondas</h2>${roundsHtml}` : "") +
         `<p class="foot">FixtureGo</p>`;
@@ -270,11 +310,22 @@
         back.innerHTML = `<span class="arrow" aria-hidden="true">←</span> En vivo`;
       }
       if (tickTimer) clearInterval(tickTimer);
-      if (live && lastPublishedAt) {
+      if (live) {
         tickTimer = setInterval(() => {
           const el = document.getElementById("updatedLine");
-          if (el) el.textContent = updatedLabel(lastPublishedAt);
-        }, 5000);
+          if (el && lastPublishedAt) el.textContent = updatedLabel(lastPublishedAt);
+          const tEl = document.getElementById("timerLine");
+          if (tEl) {
+            const t = formatTimer(lastTimerEnds, lastTimerRunning);
+            if (t) {
+              tEl.hidden = false;
+              tEl.textContent = "Cronómetro " + t;
+            } else {
+              tEl.hidden = true;
+              tEl.textContent = "";
+            }
+          }
+        }, 1000);
       }
     }
 
