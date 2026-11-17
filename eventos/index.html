@@ -248,6 +248,7 @@
       <div class="tabs">
         <button type="button" class="tab active" id="tabOpen">Abiertos</button>
         <button type="button" class="tab" id="tabMine">Mis insc.</button>
+        <button type="button" class="tab" id="tabLive">En vivo</button>
         <button type="button" class="tab" id="tabPlayed">Jugados</button>
         <button type="button" class="tab" id="tabLeagues">Ligas</button>
         <button type="button" class="tab" id="tabDatos">Mis datos</button>
@@ -319,10 +320,17 @@
     function tabFromHash() {
       const h = (location.hash || "").toLowerCase();
       if (h === "#datos") return "datos";
+      if (h === "#vivos" || h === "#vivo") return "live";
       if (h === "#jugados") return "played";
       if (h === "#ligas") return "leagues";
       if (h === "#inscritos" || h === "#mine") return "mine";
       return "open";
+    }
+    function isLiveResult(d) {
+      return !!(d && (d.live === true || d.status === "live"));
+    }
+    function isFinalResult(d) {
+      return !!d && !isLiveResult(d);
     }
     function isStandaloneApp() {
       return (
@@ -625,7 +633,7 @@
         const lid = (ev.localEventoId || "").trim();
         if (lid) {
           const r = await getDoc(doc(db, "event_results", lid));
-          if (r.exists()) return true;
+          if (r.exists() && isFinalResult(r.data())) return true;
         }
         const title = String(ev.title || "").trim();
         if (!title) return false;
@@ -636,13 +644,30 @@
         if (snap.empty) return false;
         const serieId = (ev.serieId || "").trim();
         return snap.docs.some((d) => {
-          const rSerie = String((d.data() || {}).serieId || "").trim();
+          const data = d.data() || {};
+          if (!isFinalResult(data)) return false;
+          const rSerie = String(data.serieId || "").trim();
           return !serieId || !rSerie || rSerie === serieId;
         });
       } catch (e) {
         console.warn("eventAlreadyHasResult", ev.id, e);
         return false;
       }
+    }
+
+    async function loadLiveResults() {
+      const snap = await getDocs(query(
+        collection(db, "event_results"),
+        where("live", "==", true),
+      ));
+      const list = [];
+      snap.forEach((d) => {
+        const data = d.data() || {};
+        if (!isLiveResult(data)) return;
+        list.push({ id: d.id, ...data });
+      });
+      list.sort((a, b) => (b.publishedAtEpochMs || 0) - (a.publishedAtEpochMs || 0));
+      return list;
     }
 
     async function loadOpen() {
@@ -781,6 +806,7 @@
       const a = document.createElement("a");
       a.className = "card-link";
       a.href = hrefWithReturn("../r/?id=" + encodeURIComponent(ev.id));
+      const live = isLiveResult(ev);
       const whenTxt = ev.fechaEpochMs
         ? new Date(ev.fechaEpochMs).toLocaleString("es", {
             weekday: "short", day: "numeric", month: "short",
@@ -791,9 +817,9 @@
         ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
         : "";
       a.innerHTML =
-        '<span class="badge">Resultado</span>' +
+        '<span class="badge">' + (live ? "EN VIVO" : "Resultado") + "</span>" +
         '<span class="chip">' +
-          (ev.serieNombre ? "LIGA" : "EVENTO") +
+          (live ? ("Ronda " + (ev.currentRound || "—")) : (ev.serieNombre ? "LIGA" : "EVENTO")) +
         "</span>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
         (whenTxt ? '<p class="meta">' + whenTxt + "</p>" : "") +
@@ -881,12 +907,24 @@
             const badge = ev._st === "waitlist" ? "Reserva" : "Inscripto";
             listEl.appendChild(eventCard(ev, { badge, canLeave: true, leagueMap }));
           });
+        } else if (expectedTab === "live") {
+          const list = await loadLiveResults();
+          if (!stillCurrent(seq, expectedTab)) return;
+          listEl.className = "";
+          listEl.innerHTML = "";
+          if (!list.length) {
+            listEl.className = "empty";
+            listEl.textContent = "No hay partidos en vivo por ahora.";
+            return;
+          }
+          list.forEach((ev) => listEl.appendChild(resultCard(ev)));
         } else if (expectedTab === "played") {
           const email = (auth.currentUser.email || "").trim().toLowerCase();
-          const [results, closedSignups] = await Promise.all([
+          const [resultsRaw, closedSignups] = await Promise.all([
             email ? loadMyResults(email) : Promise.resolve([]),
             loadMine(auth.currentUser.uid).then(minePlayed),
           ]);
+          const results = resultsRaw.filter((ev) => isFinalResult(ev));
           if (!stillCurrent(seq, expectedTab)) return;
           listEl.className = "";
           listEl.innerHTML = "";
@@ -937,16 +975,18 @@
       tab = next;
       document.getElementById("tabOpen").classList.toggle("active", next === "open");
       document.getElementById("tabMine").classList.toggle("active", next === "mine");
+      document.getElementById("tabLive").classList.toggle("active", next === "live");
       document.getElementById("tabPlayed").classList.toggle("active", next === "played");
       document.getElementById("tabLeagues").classList.toggle("active", next === "leagues");
       document.getElementById("tabDatos").classList.toggle("active", next === "datos");
       if (!silentHash) {
         const hash =
           next === "datos" ? "#datos"
-            : next === "played" ? "#jugados"
-              : next === "leagues" ? "#ligas"
-                : next === "mine" ? "#inscritos"
-                  : "#abiertos";
+            : next === "live" ? "#vivos"
+              : next === "played" ? "#jugados"
+                : next === "leagues" ? "#ligas"
+                  : next === "mine" ? "#inscritos"
+                    : "#abiertos";
         if (location.hash !== hash) {
           history.replaceState(null, "", hash);
         }
@@ -1015,6 +1055,7 @@
     });
     document.getElementById("tabOpen").addEventListener("click", () => setTab("open"));
     document.getElementById("tabMine").addEventListener("click", () => setTab("mine"));
+    document.getElementById("tabLive").addEventListener("click", () => setTab("live"));
     document.getElementById("tabPlayed").addEventListener("click", () => setTab("played"));
     document.getElementById("tabLeagues").addEventListener("click", () => setTab("leagues"));
     document.getElementById("tabDatos").addEventListener("click", () => setTab("datos"));

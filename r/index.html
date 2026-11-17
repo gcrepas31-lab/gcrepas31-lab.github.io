@@ -10,12 +10,12 @@
     :root, [data-theme="dark"] {
       --bg: #0b1f2e; --bg2: #1a4a6e; --card: #123049; --text: #f4f7fb;
       --muted: #9fb3c8; --accent: #7ed957; --line: #2a5070; --gold: #f5d76e;
-      --chip: #1e4d7a; --table: #0e2a40;
+      --chip: #1e4d7a; --table: #0e2a40; --live: #5ec8f0;
     }
     [data-theme="light"] {
       --bg: #eef5fa; --bg2: #cfe0ee; --card: #fff; --text: #0b1f2e;
       --muted: #5a7288; --accent: #2f9e44; --line: #d0dde8; --gold: #c9a227;
-      --chip: #1e4d7a; --table: #f3f7fb;
+      --chip: #1e4d7a; --table: #f3f7fb; --live: #1a8fb8;
     }
     * { box-sizing: border-box; }
     body {
@@ -44,6 +44,8 @@
       display: inline-block; background: var(--chip); color: #fff;
       font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
     }
+    .chip.live { background: var(--live); color: #0b1f2e; }
+    .chip.final { background: transparent; color: var(--muted); border: 1px solid var(--line); }
     h1 { margin: 10px 0 6px; font-size: 1.35rem; font-weight: 800; }
     .meta { color: var(--muted); font-size: .9rem; margin: 3px 0; line-height: 1.4; }
     h2 { margin: 22px 0 10px; font-size: 1.05rem; font-weight: 800; }
@@ -82,7 +84,7 @@
   </div>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import { applySavedTheme } from "../js/profile.js";
     import { tipoFixtureLabel } from "../js/eventLabels.js";
     import { applyBackButton, hrefWithReturn } from "../js/navBack.js?v=3";
@@ -113,6 +115,76 @@
       if (pos === 3) return "🥉";
       return String(pos || "—");
     }
+    function isLive(d) {
+      return d && (d.live === true || d.status === "live");
+    }
+    function renderCard(d) {
+      const card = document.getElementById("card");
+      card.hidden = false;
+      const live = isLive(d);
+      const ranking = Array.isArray(d.ranking) ? d.ranking : [];
+      const rounds = Array.isArray(d.rounds) ? d.rounds : [];
+      const nJug = d.jugadoresCount || ranking.length;
+      const tipoTxt = tipoFixtureLabel(d.tipoFixture);
+      const metaTipo = tipoTxt
+        ? `${esc(tipoTxt)} · ${esc(nJug)} jugadores`
+        : `${esc(nJug)} jugadores`;
+      const roundMeta = live && d.currentRound
+        ? `<p class="meta">Ronda ${esc(d.currentRound)}</p>`
+        : "";
+      let rows = ranking.map((r) => {
+        const pos = r.pos || 0;
+        return `<tr class="${pos <= 3 ? "top" : ""}">
+          <td class="pos">${posCell(pos)}</td>
+          <td>${esc(r.nombre)}</td>
+          <td>${r.pj ?? "—"}</td>
+          <td>${r.g ?? "—"}</td>
+          <td>${r.e ?? "—"}</td>
+          <td>${r.p ?? "—"}</td>
+          <td>${r.pf ?? "—"}</td>
+          <td>${r.pc ?? "—"}</td>
+          <td>${r.dif ?? "—"}</td>
+          <td><strong>${r.pts ?? "—"}</strong></td>
+        </tr>`;
+      }).join("");
+
+      let roundsHtml = rounds.map((rd) => {
+        const matches = (rd.partidos || []).map((p) =>
+          `<div class="match">Pista ${esc(p.pista)} ·
+            ${esc((p.equipo1 || []).join(" - "))}
+            <span class="score"> ${esc(p.puntos1)} - ${esc(p.puntos2)} </span>
+            ${esc((p.equipo2 || []).join(" - "))}</div>`
+        ).join("");
+        return `<details open><summary>Ronda ${esc(rd.ronda)}</summary>${matches}</details>`;
+      }).join("");
+
+      const chip = live
+        ? `<span class="chip live">EN VIVO</span>`
+        : `<span class="chip final">Evento finalizado</span>`;
+      const h2 = live ? "Clasificación en vivo" : "Clasificación final";
+
+      card.innerHTML =
+        chip +
+        `<h1>${esc(d.title || "Evento")}</h1>` +
+        (d.serieNombre ? `<p class="meta">${esc(d.serieNombre)}${d.jornada ? " · Jornada " + esc(d.jornada) : ""}</p>` : "") +
+        `<p class="meta">${when(d.fechaEpochMs)}</p>` +
+        `<p class="meta">${metaTipo}</p>` +
+        roundMeta +
+        `<h2>${h2}</h2>` +
+        `<div class="table-wrap"><table><thead><tr>
+          <th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
+          <th>PF</th><th>PC</th><th>DIF</th><th>Pts</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>` +
+        (roundsHtml ? `<h2>Resultados por rondas</h2>${roundsHtml}` : "") +
+        `<p class="foot">FixtureGo</p>`;
+
+      document.title = (live ? "EN VIVO · " : "") + (d.title || "Resultado") + " · FixtureGo";
+      const back = document.querySelector(".back-btn");
+      if (back && live) {
+        back.setAttribute("href", hrefWithReturn("../eventos/#vivos"));
+        back.innerHTML = `<span class="arrow" aria-hidden="true">←</span> En vivo`;
+      }
+    }
 
     if (!id || !ready) {
       document.getElementById("loading").hidden = true;
@@ -120,61 +192,19 @@
     } else {
       const app = initializeApp(cfg);
       const db = getFirestore(app);
-      const snap = await getDoc(doc(db, "event_results", id));
-      document.getElementById("loading").hidden = true;
-      if (!snap.exists()) {
+      onSnapshot(doc(db, "event_results", id), (snap) => {
+        document.getElementById("loading").hidden = true;
+        if (!snap.exists()) {
+          document.getElementById("err").hidden = false;
+          document.getElementById("card").hidden = true;
+          return;
+        }
+        document.getElementById("err").hidden = true;
+        renderCard(snap.data());
+      }, () => {
+        document.getElementById("loading").hidden = true;
         document.getElementById("err").hidden = false;
-      } else {
-        const d = snap.data();
-        const card = document.getElementById("card");
-        card.hidden = false;
-        const ranking = Array.isArray(d.ranking) ? d.ranking : [];
-        const rounds = Array.isArray(d.rounds) ? d.rounds : [];
-        const nJug = d.jugadoresCount || ranking.length;
-        const tipoTxt = tipoFixtureLabel(d.tipoFixture);
-        const metaTipo = tipoTxt
-          ? `${esc(tipoTxt)} · ${esc(nJug)} jugadores`
-          : `${esc(nJug)} jugadores`;
-        let rows = ranking.map((r) => {
-          const pos = r.pos || 0;
-          return `<tr class="${pos <= 3 ? "top" : ""}">
-            <td class="pos">${posCell(pos)}</td>
-            <td>${esc(r.nombre)}</td>
-            <td>${r.pj ?? "—"}</td>
-            <td>${r.g ?? "—"}</td>
-            <td>${r.e ?? "—"}</td>
-            <td>${r.p ?? "—"}</td>
-            <td>${r.pf ?? "—"}</td>
-            <td>${r.pc ?? "—"}</td>
-            <td>${r.dif ?? "—"}</td>
-            <td><strong>${r.pts ?? "—"}</strong></td>
-          </tr>`;
-        }).join("");
-
-        let roundsHtml = rounds.map((rd) => {
-          const matches = (rd.partidos || []).map((p) =>
-            `<div class="match">Pista ${esc(p.pista)} ·
-              ${esc((p.equipo1 || []).join(" - "))}
-              <span class="score"> ${esc(p.puntos1)} - ${esc(p.puntos2)} </span>
-              ${esc((p.equipo2 || []).join(" - "))}</div>`
-          ).join("");
-          return `<details><summary>Ronda ${esc(rd.ronda)}</summary>${matches}</details>`;
-        }).join("");
-
-        card.innerHTML =
-          `<span class="chip">RESULTADO</span>` +
-          `<h1>${esc(d.title || "Evento")}</h1>` +
-          (d.serieNombre ? `<p class="meta">${esc(d.serieNombre)}${d.jornada ? " · Jornada " + esc(d.jornada) : ""}</p>` : "") +
-          `<p class="meta">${when(d.fechaEpochMs)}</p>` +
-          `<p class="meta">${metaTipo}</p>` +
-          `<h2>Clasificación final</h2>` +
-          `<div class="table-wrap"><table><thead><tr>
-            <th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
-            <th>PF</th><th>PC</th><th>DIF</th><th>Pts</th>
-          </tr></thead><tbody>${rows}</tbody></table></div>` +
-          (roundsHtml ? `<h2>Resultados por rondas</h2>${roundsHtml}` : "") +
-          `<p class="foot">FixtureGo</p>`;
-      }
+      });
     }
   </script>
 </body>
