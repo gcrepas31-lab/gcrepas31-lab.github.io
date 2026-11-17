@@ -205,6 +205,17 @@
       padding: 10px 16px; border-radius: 999px; font-size: .9rem; z-index: 20;
       box-shadow: 0 8px 24px rgba(0,0,0,.25);
     }
+    .live-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); margin-left: 6px; vertical-align: middle;
+      box-shadow: 0 0 0 0 rgba(126, 217, 87, .55);
+      animation: live-pulse 1.4s ease-out infinite;
+    }
+    @keyframes live-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(126, 217, 87, .55); }
+      70% { box-shadow: 0 0 0 7px rgba(126, 217, 87, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(126, 217, 87, 0); }
+    }
   </style>
   <script src="../e/firebase-config.js"></script>
 </head>
@@ -816,11 +827,16 @@
       const top = Array.isArray(ev.ranking) && ev.ranking[0]
         ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
         : "";
+      const cur = Number(ev.currentRound || 0);
+      const tot = Number(ev.totalRounds || 0);
+      const progress = live
+        ? (cur && tot ? (cur + "/" + tot) : (cur ? ("Ronda " + cur) : "EN VIVO"))
+        : (ev.serieNombre ? "LIGA" : "EVENTO");
       a.innerHTML =
-        '<span class="badge">' + (live ? "EN VIVO" : "Resultado") + "</span>" +
-        '<span class="chip">' +
-          (live ? ("Ronda " + (ev.currentRound || "—")) : (ev.serieNombre ? "LIGA" : "EVENTO")) +
-        "</span>" +
+        '<div class="chip-row">' +
+          '<span class="badge">' + (live ? 'EN VIVO<span class="live-dot" aria-hidden="true"></span>' : "Resultado") + "</span>" +
+          '<span class="chip">' + escapeHtml(progress) + "</span>" +
+        "</div>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
         (whenTxt ? '<p class="meta">' + whenTxt + "</p>" : "") +
         (ev.serieNombre

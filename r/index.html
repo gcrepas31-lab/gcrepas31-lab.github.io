@@ -10,12 +10,12 @@
     :root, [data-theme="dark"] {
       --bg: #0b1f2e; --bg2: #1a4a6e; --card: #123049; --text: #f4f7fb;
       --muted: #9fb3c8; --accent: #7ed957; --line: #2a5070; --gold: #f5d76e;
-      --chip: #1e4d7a; --table: #0e2a40; --live: #5ec8f0;
+      --chip: #1e4d7a; --table: #0e2a40; --live: #5ec8f0; --dot: #7ed957;
     }
     [data-theme="light"] {
       --bg: #eef5fa; --bg2: #cfe0ee; --card: #fff; --text: #0b1f2e;
       --muted: #5a7288; --accent: #2f9e44; --line: #d0dde8; --gold: #c9a227;
-      --chip: #1e4d7a; --table: #f3f7fb; --live: #1a8fb8;
+      --chip: #1e4d7a; --table: #f3f7fb; --live: #1a8fb8; --dot: #2f9e44;
     }
     * { box-sizing: border-box; }
     body {
@@ -40,14 +40,36 @@
       background: var(--card); border-radius: 18px; overflow: hidden;
       box-shadow: 0 16px 40px rgba(0,0,0,.28); padding: 18px 16px 22px;
     }
+    .chip-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin-bottom: 2px;
+    }
+    .chip-live-wrap { display: inline-flex; align-items: center; gap: 8px; }
     .chip {
       display: inline-block; background: var(--chip); color: #fff;
       font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
     }
     .chip.live { background: var(--live); color: #0b1f2e; }
     .chip.final { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+    .live-dot {
+      width: 9px; height: 9px; border-radius: 50%; background: var(--dot);
+      box-shadow: 0 0 0 0 rgba(126, 217, 87, .55);
+      animation: live-pulse 1.4s ease-out infinite;
+      flex-shrink: 0;
+    }
+    .live-dot.sm { width: 8px; height: 8px; }
+    @keyframes live-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(126, 217, 87, .55); }
+      70% { box-shadow: 0 0 0 8px rgba(126, 217, 87, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(126, 217, 87, 0); }
+    }
+    .round-counter {
+      font-size: .85rem; font-weight: 800; color: var(--text);
+      letter-spacing: .04em;
+    }
     h1 { margin: 10px 0 6px; font-size: 1.35rem; font-weight: 800; }
     .meta { color: var(--muted); font-size: .9rem; margin: 3px 0; line-height: 1.4; }
+    .updated { color: var(--accent); font-size: .82rem; font-weight: 650; margin: 8px 0 0; }
     h2 { margin: 22px 0 10px; font-size: 1.05rem; font-weight: 800; }
     .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
     table { width: 100%; border-collapse: collapse; font-size: .82rem; background: var(--table); }
@@ -60,15 +82,25 @@
       margin: 8px 0; border: 1px solid var(--line); border-radius: 12px;
       background: var(--table); overflow: hidden;
     }
+    details.current { border-color: rgba(126, 217, 87, .55); box-shadow: 0 0 0 1px rgba(126, 217, 87, .15); }
+    details.pending { opacity: .62; }
+    details.done summary { color: var(--muted); }
     summary {
       padding: 12px 14px; cursor: pointer; font-weight: 700; list-style: none;
+      display: flex; align-items: center; gap: 8px;
     }
     summary::-webkit-details-marker { display: none; }
+    .round-tag {
+      margin-left: auto; font-size: .68rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+    }
+    details.current .round-tag { color: var(--accent); }
     .match {
       padding: 8px 14px 10px; border-top: 1px solid var(--line);
       font-size: .86rem; color: var(--muted); line-height: 1.45;
     }
     .score { color: var(--text); font-weight: 700; }
+    .score.pending { color: var(--muted); font-weight: 650; }
     .loading, .err { text-align: center; color: var(--muted); padding: 40px 12px; }
     .err { color: #ffb4a8; }
     .foot { margin-top: 16px; text-align: center; color: var(--muted); font-size: .78rem; }
@@ -97,6 +129,8 @@
     const id = new URLSearchParams(location.search).get("id");
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY";
+    let lastPublishedAt = 0;
+    let tickTimer = null;
 
     function esc(s) {
       return String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -118,10 +152,37 @@
     function isLive(d) {
       return d && (d.live === true || d.status === "live");
     }
+    function updatedLabel(ms) {
+      if (!ms) return "";
+      const sec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+      if (sec < 15) return "Actualizado hace un momento";
+      if (sec < 60) return "Actualizado hace " + sec + " s";
+      const min = Math.floor(sec / 60);
+      return "Actualizado hace " + min + " min";
+    }
+    function roundStatus(rd, d, live) {
+      if (rd.status) return rd.status;
+      const cur = Number(d.currentRound || 0);
+      const n = Number(rd.ronda || 0);
+      if (!live) return "done";
+      if (n < cur) return "done";
+      if (n === cur) return "current";
+      return "pending";
+    }
+    function scoreHtml(p) {
+      const played = p.played === true;
+      const hasScore = p.hasScore === true || played ||
+        Number(p.puntos1) > 0 || Number(p.puntos2) > 0;
+      if (!hasScore) {
+        return `<span class="score pending"> — </span>`;
+      }
+      return `<span class="score"> ${esc(p.puntos1)} - ${esc(p.puntos2)} </span>`;
+    }
     function renderCard(d) {
       const card = document.getElementById("card");
       card.hidden = false;
       const live = isLive(d);
+      lastPublishedAt = Number(d.publishedAtEpochMs || 0);
       const ranking = Array.isArray(d.ranking) ? d.ranking : [];
       const rounds = Array.isArray(d.rounds) ? d.rounds : [];
       const nJug = d.jugadoresCount || ranking.length;
@@ -129,11 +190,16 @@
       const metaTipo = tipoTxt
         ? `${esc(tipoTxt)} · ${esc(nJug)} jugadores`
         : `${esc(nJug)} jugadores`;
-      const roundMeta = live && d.currentRound
-        ? `<p class="meta">Ronda ${esc(d.currentRound)}</p>`
-        : "";
+      const cur = Number(d.currentRound || 0);
+      const total = Number(d.totalRounds || rounds.length || 0);
+      const progress = (cur && total)
+        ? `${cur}/${total}`
+        : (cur ? String(cur) : "");
+
+      const ptsHead = live ? "" : "<th>Pts</th>";
       let rows = ranking.map((r) => {
         const pos = r.pos || 0;
+        const ptsCell = live ? "" : `<td><strong>${r.pts ?? "—"}</strong></td>`;
         return `<tr class="${pos <= 3 ? "top" : ""}">
           <td class="pos">${posCell(pos)}</td>
           <td>${esc(r.nombre)}</td>
@@ -144,24 +210,43 @@
           <td>${r.pf ?? "—"}</td>
           <td>${r.pc ?? "—"}</td>
           <td>${r.dif ?? "—"}</td>
-          <td><strong>${r.pts ?? "—"}</strong></td>
+          ${ptsCell}
         </tr>`;
       }).join("");
 
       let roundsHtml = rounds.map((rd) => {
+        const st = roundStatus(rd, d, live);
+        const tag = st === "current" ? "En curso" : st === "done" ? "Jugada" : "Pendiente";
+        const open = st === "current" || st === "done" ? " open" : "";
         const matches = (rd.partidos || []).map((p) =>
           `<div class="match">Pista ${esc(p.pista)} ·
             ${esc((p.equipo1 || []).join(" - "))}
-            <span class="score"> ${esc(p.puntos1)} - ${esc(p.puntos2)} </span>
+            ${scoreHtml(p)}
             ${esc((p.equipo2 || []).join(" - "))}</div>`
         ).join("");
-        return `<details open><summary>Ronda ${esc(rd.ronda)}</summary>${matches}</details>`;
+        const dot = (live && st === "current")
+          ? `<span class="live-dot sm" aria-hidden="true"></span>`
+          : "";
+        return `<details class="${esc(st)}"${open}>
+          <summary>${dot}<span>Ronda ${esc(rd.ronda)}</span>
+            <span class="round-tag">${tag}</span></summary>
+          ${matches}
+        </details>`;
       }).join("");
 
       const chip = live
-        ? `<span class="chip live">EN VIVO</span>`
-        : `<span class="chip final">Evento finalizado</span>`;
+        ? `<div class="chip-row">
+            <span class="chip-live-wrap">
+              <span class="chip live">EN VIVO</span>
+              <span class="live-dot" title="En vivo" aria-hidden="true"></span>
+            </span>
+            ${progress ? `<span class="round-counter">${esc(progress)}</span>` : ""}
+          </div>`
+        : `<span class="chip final">FINALIZADO</span>`;
       const h2 = live ? "Clasificación en vivo" : "Clasificación final";
+      const updated = lastPublishedAt
+        ? `<p class="updated" id="updatedLine">${esc(updatedLabel(lastPublishedAt))}</p>`
+        : "";
 
       card.innerHTML =
         chip +
@@ -169,11 +254,11 @@
         (d.serieNombre ? `<p class="meta">${esc(d.serieNombre)}${d.jornada ? " · Jornada " + esc(d.jornada) : ""}</p>` : "") +
         `<p class="meta">${when(d.fechaEpochMs)}</p>` +
         `<p class="meta">${metaTipo}</p>` +
-        roundMeta +
+        updated +
         `<h2>${h2}</h2>` +
         `<div class="table-wrap"><table><thead><tr>
           <th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th>
-          <th>PF</th><th>PC</th><th>DIF</th><th>Pts</th>
+          <th>PF</th><th>PC</th><th>DIF</th>${ptsHead}
         </tr></thead><tbody>${rows}</tbody></table></div>` +
         (roundsHtml ? `<h2>Resultados por rondas</h2>${roundsHtml}` : "") +
         `<p class="foot">FixtureGo</p>`;
@@ -183,6 +268,13 @@
       if (back && live) {
         back.setAttribute("href", hrefWithReturn("../eventos/#vivos"));
         back.innerHTML = `<span class="arrow" aria-hidden="true">←</span> En vivo`;
+      }
+      if (tickTimer) clearInterval(tickTimer);
+      if (live && lastPublishedAt) {
+        tickTimer = setInterval(() => {
+          const el = document.getElementById("updatedLine");
+          if (el) el.textContent = updatedLabel(lastPublishedAt);
+        }, 5000);
       }
     }
 
