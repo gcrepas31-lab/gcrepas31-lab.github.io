@@ -88,26 +88,27 @@
       font-size: .8rem; text-decoration: underline; padding: 2px 0; white-space: nowrap;
     }
 
-    .tabs-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
     .tabs {
-      display: flex; gap: 6px;
-      background: rgba(0,0,0,.12); border-radius: 999px; padding: 4px;
+      display: flex; gap: 3px; margin-bottom: 14px;
+      background: rgba(0,0,0,.12); border-radius: 999px; padding: 3px;
     }
     .tab {
-      flex: 1; padding: 9px 4px; border: none; border-radius: 999px;
+      flex: 1; min-width: 0; padding: 8px 2px; border: none; border-radius: 999px;
       background: transparent; color: var(--muted); font-weight: 700;
-      cursor: pointer; font-size: .7rem;
-      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      cursor: pointer; font-size: .62rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+      white-space: nowrap;
     }
     .tab.active { background: var(--accent); color: var(--on-accent); }
     .tab-count {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 1.15rem; height: 1.15rem; padding: 0 5px;
-      border-radius: 999px; font-size: .62rem; font-weight: 800;
+      min-width: .95rem; height: .95rem; padding: 0 3px;
+      border-radius: 999px; font-size: .55rem; font-weight: 800;
       background: var(--warn, #ffd27a); color: #0b1f2e; line-height: 1;
+      flex-shrink: 0;
     }
     .tab-count.dot {
-      min-width: 8px; width: 8px; height: 8px; padding: 0;
+      min-width: 7px; width: 7px; height: 7px; padding: 0;
       background: var(--accent); color: transparent; font-size: 0;
     }
     .tab.active .tab-count {
@@ -272,17 +273,13 @@
         </div>
       </div>
 
-      <div class="tabs-wrap">
-        <div class="tabs">
-          <button type="button" class="tab active" id="tabOpen">Abiertos<span class="tab-count" id="countOpen" hidden></span></button>
-          <button type="button" class="tab" id="tabMine">Mis insc.<span class="tab-count" id="countMine" hidden></span></button>
-          <button type="button" class="tab" id="tabLive">En vivo<span class="tab-count" id="countLive" hidden></span></button>
-        </div>
-        <div class="tabs">
-          <button type="button" class="tab" id="tabPlayed">Jugados<span class="tab-count" id="countPlayed" hidden></span></button>
-          <button type="button" class="tab" id="tabLeagues">Ligas<span class="tab-count" id="countLeagues" hidden></span></button>
-          <button type="button" class="tab" id="tabDatos">Mis datos<span class="tab-count" id="countDatos" hidden></span></button>
-        </div>
+      <div class="tabs">
+        <button type="button" class="tab active" id="tabOpen">Abiertos<span class="tab-count" id="countOpen" hidden></span></button>
+        <button type="button" class="tab" id="tabMine">Mis insc.<span class="tab-count" id="countMine" hidden></span></button>
+        <button type="button" class="tab" id="tabLive">En vivo<span class="tab-count" id="countLive" hidden></span></button>
+        <button type="button" class="tab" id="tabPlayed">Jugados<span class="tab-count" id="countPlayed" hidden></span></button>
+        <button type="button" class="tab" id="tabLeagues">Ligas<span class="tab-count" id="countLeagues" hidden></span></button>
+        <button type="button" class="tab" id="tabDatos">Mis datos<span class="tab-count" id="countDatos" hidden></span></button>
       </div>
 
       <div id="list" class="loading">Cargando…</div>
