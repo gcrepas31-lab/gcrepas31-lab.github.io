@@ -331,7 +331,7 @@
       loadRemoteProfile, saveRemoteProfile,
     } from "../js/profile.js";
     import { signInWithGoogleId } from "../js/googleAuth.js";
-    import { modalityLabelForEvent } from "../js/eventLabels.js";
+    import { modalityLabelForEvent, tipoFixtureLabel } from "../js/eventLabels.js";
     import { hrefWithReturn } from "../js/navBack.js?v=3";
 
     applySavedTheme();
@@ -828,6 +828,35 @@
       return wrap;
     }
 
+    function isPairsResult(ev) {
+      if (!ev) return false;
+      if (ev.rankingMode === "pairs") return true;
+      const t = String(ev.tipoFixture || "").toUpperCase();
+      if (t === "AMERICANA_PAREJAS" || t === "AMERICANA_MIXTA" || t === "AMERICANA_ESCALERA") return true;
+      const m = String(ev.americanaModality || ev.modality || "").toLowerCase();
+      return m === "pairs" || m === "mixed_fixed" || m === "ladder";
+    }
+
+    function firstPlaceLabel(ev, live) {
+      if (live) return "";
+      const rows = Array.isArray(ev.ranking) ? ev.ranking : [];
+      if (!rows.length) return "";
+      let name = String(rows[0].nombre || "").trim();
+      if (!name) return "";
+      if (isPairsResult(ev) && !name.includes(" / ") && rows[1]) {
+        const b = String(rows[1].nombre || "").trim();
+        if (b) name = name + " / " + b;
+      }
+      return "1º " + escapeHtml(name);
+    }
+
+    function categoryBadge(ev) {
+      const t = String(ev.tipoFixture || "").toUpperCase();
+      if (t === "TORNEO" || ev.type === "torneo") return "Torneo";
+      if (ev.serieNombre || ev.serieId) return "Liga";
+      return "Evento";
+    }
+
     function resultCard(ev) {
       const wrap = document.createElement("div");
       wrap.className = "card-wrap";
@@ -836,26 +865,30 @@
       a.href = hrefWithReturn("../r/?id=" + encodeURIComponent(ev.id));
       const live = isLiveResult(ev);
       const whenTxt = ev.fechaEpochMs
-        ? new Date(ev.fechaEpochMs).toLocaleString("es", {
-            weekday: "short", day: "numeric", month: "short",
-            hour: "2-digit", minute: "2-digit",
+        ? new Date(ev.fechaEpochMs).toLocaleDateString("es", {
+            day: "numeric", month: "short", year: "numeric",
           })
         : "";
-      const top = Array.isArray(ev.ranking) && ev.ranking[0]
-        ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
-        : "";
+      const formatShort =
+        tipoFixtureLabel(ev.tipoFixture) || modalityLabel(ev) || "";
+      const top = firstPlaceLabel(ev, live);
       const cur = Number(ev.currentRound || 0);
       const tot = Number(ev.totalRounds || 0);
-      const progress = live
-        ? (cur && tot ? (cur + "/" + tot) : (cur ? ("Ronda " + cur) : "EN VIVO"))
-        : (ev.serieNombre ? "LIGA" : "EVENTO");
+      const liveProgress = cur && tot
+        ? (cur + "/" + tot)
+        : (cur ? ("Ronda " + cur) : "EN VIVO");
+      const badge = live
+        ? 'EN VIVO<span class="live-dot" aria-hidden="true"></span>'
+        : categoryBadge(ev);
+      const chip = live ? liveProgress : formatShort;
+      const metaLine = [whenTxt, formatShort].filter(Boolean).join(" · ");
       a.innerHTML =
         '<div class="chip-row">' +
-          '<span class="badge">' + (live ? 'EN VIVO<span class="live-dot" aria-hidden="true"></span>' : "Resultado") + "</span>" +
-          '<span class="chip">' + escapeHtml(progress) + "</span>" +
+          '<span class="badge">' + badge + "</span>" +
+          (chip && live ? '<span class="chip">' + escapeHtml(chip) + "</span>" : "") +
         "</div>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
-        (whenTxt ? '<p class="meta">' + whenTxt + "</p>" : "") +
+        (metaLine ? '<p class="meta">' + escapeHtml(metaLine) + "</p>" : "") +
         (ev.serieNombre
           ? '<p class="meta">' + escapeHtml(ev.serieNombre) +
             (ev.jornada ? " · Jornada " + escapeHtml(ev.jornada) : "") + "</p>"
