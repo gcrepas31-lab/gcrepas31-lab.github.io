@@ -143,6 +143,13 @@
     .badge {
       margin-left: auto; font-size: .72rem; color: var(--accent); font-weight: 700;
     }
+    /* Jugados: Evento=verde, Liga=azul, Torneo=ámbar */
+    .badge.cat-evento { color: var(--accent); }
+    .badge.cat-liga { color: #64b5f6; }
+    .badge.cat-torneo { color: #ffb74d; }
+    .badge.cat-live { color: var(--accent); }
+    [data-theme="light"] .badge.cat-liga { color: #1976d2; }
+    [data-theme="light"] .badge.cat-torneo { color: #f57c00; }
     .card-wrap h2 { font-size: 1.1rem; margin: 0 0 2px; }
     .title-sub { color: var(--muted); font-size: .82rem; margin: 0 0 6px; font-weight: 600; }
     .meta { color: var(--muted); font-size: .9rem; margin: 2px 0; }
@@ -817,7 +824,7 @@
         ? "1º " + escapeHtml(ev.ranking[0].nombre || "")
         : "";
       a.innerHTML =
-        '<span class="badge">Liga</span>' +
+        '<span class="badge cat-liga">Liga</span>' +
         '<span class="chip">' + (ev.activa ? "EN CURSO" : "FIN") + "</span>" +
         "<h2>" + escapeHtml(ev.nombre || "Liga") + "</h2>" +
         '<p class="meta">' + escapeHtml(ev.numJornadas || 0) + " jornadas" +
@@ -852,9 +859,13 @@
 
     function categoryBadge(ev) {
       const t = String(ev.tipoFixture || "").toUpperCase();
-      if (t === "TORNEO" || ev.type === "torneo") return "Torneo";
-      if (ev.serieNombre || ev.serieId) return "Liga";
-      return "Evento";
+      if (t === "TORNEO" || ev.type === "torneo") {
+        return { label: "Torneo", cls: "cat-torneo" };
+      }
+      if (ev.serieNombre || ev.serieId) {
+        return { label: "Liga", cls: "cat-liga" };
+      }
+      return { label: "Evento", cls: "cat-evento" };
     }
 
     function resultCard(ev) {
@@ -877,15 +888,15 @@
       const liveProgress = cur && tot
         ? (cur + "/" + tot)
         : (cur ? ("Ronda " + cur) : "EN VIVO");
-      const badge = live
-        ? 'EN VIVO<span class="live-dot" aria-hidden="true"></span>'
-        : categoryBadge(ev);
-      const chip = live ? liveProgress : formatShort;
+      const cat = categoryBadge(ev);
+      const badgeHtml = live
+        ? '<span class="badge cat-live">EN VIVO<span class="live-dot" aria-hidden="true"></span></span>'
+        : '<span class="badge ' + cat.cls + '">' + escapeHtml(cat.label) + "</span>";
       const metaLine = [whenTxt, formatShort].filter(Boolean).join(" · ");
       a.innerHTML =
         '<div class="chip-row">' +
-          '<span class="badge">' + badge + "</span>" +
-          (chip && live ? '<span class="chip">' + escapeHtml(chip) + "</span>" : "") +
+          (live ? '<span class="chip">' + escapeHtml(liveProgress) + "</span>" : "") +
+          badgeHtml +
         "</div>" +
         "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
         (metaLine ? '<p class="meta">' + escapeHtml(metaLine) + "</p>" : "") +
