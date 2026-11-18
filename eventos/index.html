@@ -141,15 +141,21 @@
       font-weight: 650; letter-spacing: 0;
     }
     .badge {
-      margin-left: auto; font-size: .72rem; color: var(--accent); font-weight: 700;
+      margin-left: auto;
+      display: inline-block;
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px;
+      background: var(--chip); color: #fff;
     }
-    /* Jugados: Evento=verde, Liga=azul, Torneo=ámbar */
-    .badge.cat-evento { color: var(--accent); }
-    .badge.cat-liga { color: #64b5f6; }
-    .badge.cat-torneo { color: #ffb74d; }
-    .badge.cat-live { color: var(--accent); }
-    [data-theme="light"] .badge.cat-liga { color: #1976d2; }
-    [data-theme="light"] .badge.cat-torneo { color: #f57c00; }
+    /* Jugados pastillas: Evento=verde, Liga=azul, Torneo=ámbar (texto contraste) */
+    .badge.cat-evento { background: #4caf50; color: #fff; }
+    .badge.cat-liga { background: #1e4d7a; color: #fff; }
+    .badge.cat-torneo { background: #ff9800; color: #0b1f2e; }
+    .badge.cat-live { background: #4caf50; color: #fff; }
+    [data-theme="light"] .badge.cat-evento { background: #2f9e44; color: #fff; }
+    [data-theme="light"] .badge.cat-liga { background: #1e4d7a; color: #fff; }
+    [data-theme="light"] .badge.cat-torneo { background: #ff9800; color: #0b1f2e; }
     .card-wrap h2 { font-size: 1.1rem; margin: 0 0 2px; }
     .title-sub { color: var(--muted); font-size: .82rem; margin: 0 0 6px; font-weight: 600; }
     .meta { color: var(--muted); font-size: .9rem; margin: 2px 0; }
