@@ -102,10 +102,17 @@
     .card-head .brand { margin-left: auto; font-weight: 700; font-size: .9rem; }
     .card-head .brand .go { color: #5ec8f0; }
     .body { padding: 20px 18px 24px; }
-    .title { font-size: 1.45rem; font-weight: 800; margin: 4px 0 10px; letter-spacing: -.01em; }
+    .title { font-size: 1.45rem; font-weight: 800; margin: 4px 0 6px; letter-spacing: -.01em; }
+    .head-main {
+      display: flex; gap: 10px; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 4px;
+    }
+    .head-main-left { min-width: 0; flex: 1; }
     .countdown {
-      margin: -2px 0 10px; font-size: .95rem; font-weight: 700;
-      color: var(--accent); line-height: 1.35;
+      flex: 0 1 auto; max-width: 42%;
+      margin: 6px 0 0; text-align: right;
+      font-size: .82rem; font-weight: 700;
+      color: var(--accent); line-height: 1.25;
     }
     .meta { color: var(--muted); font-size: .92rem; margin: 4px 0; line-height: 1.45; }
     .meta-block { margin: 0 0 4px; }
@@ -298,11 +305,15 @@
         <strong class="brand">Fixture<span class="go">Go</span></strong>
       </div>
       <div class="body">
-        <p class="meta" id="when">—</p>
-        <h1 class="title" id="title">Evento</h1>
-        <p class="countdown" id="countdown" hidden></p>
-        <p class="meta" id="zone"></p>
-        <p class="meta" id="venue"></p>
+        <div class="head-main">
+          <div class="head-main-left">
+            <p class="meta" id="when">—</p>
+            <h1 class="title" id="title">Evento</h1>
+            <p class="meta" id="zone"></p>
+            <p class="meta" id="venue"></p>
+          </div>
+          <p class="countdown" id="countdown" hidden></p>
+        </div>
         <p class="meta" id="spots"></p>
         <p class="meta" id="min"></p>
         <p class="meta" id="closes"></p>
