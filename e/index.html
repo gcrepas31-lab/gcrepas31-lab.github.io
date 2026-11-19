@@ -87,13 +87,17 @@
       background: var(--card); border-radius: 18px; overflow: hidden;
       box-shadow: 0 16px 40px rgba(0,0,0,.3);
     }
-    .card-head {
-      background: #0e2a40; padding: 14px 16px;
-      display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    .card-brand {
+      background: #0e2a40; padding: 10px 16px;
+      display: flex; align-items: center; justify-content: flex-end;
     }
+    .card-brand .brand { font-weight: 700; font-size: .9rem; }
+    .card-brand .brand .go { color: #5ec8f0; }
     .chip {
-      background: var(--chip); color: #fff; font-size: .7rem; font-weight: 700;
-      letter-spacing: .04em; padding: 3px 9px; border-radius: 999px;
+      display: inline-flex; align-items: center;
+      background: var(--chip); color: #fff; font-size: .72rem; font-weight: 700;
+      letter-spacing: .04em; padding: 5px 11px; border-radius: 999px;
+      white-space: nowrap; line-height: 1.2;
     }
     .chip.vis-open {
       background: rgba(126, 217, 87, .18); color: var(--accent);
@@ -109,32 +113,55 @@
       background: transparent; color: var(--muted); border: 1px solid var(--line);
       font-weight: 650; letter-spacing: 0;
     }
-    .card-head .brand { margin-left: auto; font-weight: 700; font-size: .9rem; }
-    .card-head .brand .go { color: #5ec8f0; }
-    .body { padding: 20px 18px 24px; }
-    .title { font-size: 1.45rem; font-weight: 800; margin: 4px 0 6px; letter-spacing: -.01em; }
-    .head-main {
-      display: flex; gap: 10px; align-items: flex-start;
-      justify-content: space-between; margin-bottom: 4px;
+    .chip.joined {
+      background: rgba(126, 217, 87, .16); color: var(--accent);
+      border: 1px solid rgba(126, 217, 87, .45);
+      font-weight: 700; letter-spacing: 0;
     }
-    .head-main-left { min-width: 0; flex: 1; }
-    .countdown {
-      flex: 0 1 auto; max-width: 42%;
-      margin: 6px 0 0; text-align: right;
+    .body { padding: 18px 18px 24px; }
+    .head-row1 {
+      display: flex; align-items: center; gap: 10px;
+      justify-content: space-between; margin-bottom: 12px;
+    }
+    .head-row1 .countdown {
+      margin: 0; text-align: right; flex: 0 1 auto; max-width: 48%;
       font-size: .82rem; font-weight: 700;
       color: var(--accent); line-height: 1.25;
     }
+    .title { font-size: 1.45rem; font-weight: 800; margin: 0 0 6px; letter-spacing: -.01em; }
     .meta { color: var(--muted); font-size: .92rem; margin: 4px 0; line-height: 1.45; }
     .meta-block { margin: 0 0 4px; }
+    .meta-chips {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin: 12px 0 0;
+    }
+    .spots-row {
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: space-between; gap: 12px;
+      margin-top: 16px;
+    }
     #spots {
-      display: inline-block; margin-top: 10px; margin-bottom: 2px;
+      display: inline-block; margin: 0;
       font-weight: 700; color: var(--text); font-size: .95rem;
       background: rgba(126, 217, 87, .12); border: 1px solid rgba(126, 217, 87, .28);
-      padding: 6px 12px; border-radius: 999px;
+      padding: 8px 14px; border-radius: 999px;
     }
     [data-theme="light"] #spots {
       background: rgba(47, 158, 68, .1); border-color: rgba(47, 158, 68, .25);
     }
+    #ownerBadge {
+      display: inline-block; margin: 0;
+      font-weight: 700; font-size: .88rem;
+      color: #1e4d7a; background: rgba(30, 77, 122, .14);
+      border: 1px solid rgba(30, 77, 122, .45);
+      padding: 8px 14px; border-radius: 999px;
+    }
+    #ownerBadge.joined {
+      color: var(--accent);
+      background: rgba(126, 217, 87, .16);
+      border-color: rgba(126, 217, 87, .45);
+    }
+    [data-theme="light"] #ownerBadge:not(.joined) { color: #1e4d7a; }
 
     .roster {
       margin-top: 14px; padding: 16px 14px 14px;
@@ -309,23 +336,27 @@
     <p class="err-page" id="err" hidden>No encontramos este evento.</p>
 
     <div class="card" id="card" hidden>
-      <div class="card-head">
-        <span class="chip" id="typeChip">EVENTO</span>
-        <span class="chip soft" id="modalityChip" hidden></span>
-        <span class="chip" id="visibilityChip" hidden></span>
+      <div class="card-brand">
         <strong class="brand">Fixture<span class="go">Go</span></strong>
       </div>
       <div class="body">
-        <div class="head-main">
-          <div class="head-main-left">
-            <p class="meta" id="when">—</p>
-            <h1 class="title" id="title">Evento</h1>
-            <p class="meta" id="zone"></p>
-            <p class="meta" id="venue"></p>
-          </div>
+        <div class="head-row1">
+          <span class="chip" id="typeChip">EVENTO</span>
           <p class="countdown" id="countdown" hidden></p>
         </div>
-        <p class="meta" id="spots"></p>
+        <h1 class="title" id="title">Evento</h1>
+        <p class="meta" id="when">—</p>
+        <p class="meta" id="zone"></p>
+        <p class="meta" id="venue"></p>
+        <div class="meta-chips" id="metaChips">
+          <span class="chip soft" id="modalityChip" hidden></span>
+          <span class="chip" id="visibilityChip" hidden></span>
+          <span class="chip joined" id="joinedChip" hidden>Inscripto</span>
+        </div>
+        <div class="spots-row">
+          <p class="meta" id="spots"></p>
+          <span id="ownerBadge" hidden>Creador</span>
+        </div>
         <p class="meta" id="min"></p>
         <p class="meta" id="closes"></p>
         <div id="alertsBox"></div>
@@ -642,17 +673,22 @@
       }, Math.max(1000, align));
     }
 
+    function paintHeaderMeta() {
+      const joinedChip = document.getElementById("joinedChip");
+      if (joinedChip) joinedChip.hidden = !myStatus;
+      const ownerBadge = document.getElementById("ownerBadge");
+      if (ownerBadge && eventState) {
+        const uid = auth && auth.currentUser && auth.currentUser.uid;
+        const isOwner = !!(uid && eventState.ownerUid && uid === eventState.ownerUid);
+        ownerBadge.hidden = !isOwner;
+        ownerBadge.className = myStatus ? "joined" : "";
+      }
+    }
+
     function fillEvent(s) {
       const closed = s.status !== "open";
       document.getElementById("typeChip").textContent =
         s.type === "torneo" ? "TORNEO" : "AMERICANA";
-      const visChip = document.getElementById("visibilityChip");
-      if (visChip) {
-        const invite = String(s.visibility || "public") === "invite";
-        visChip.hidden = false;
-        visChip.className = "chip " + (invite ? "vis-invite" : "vis-open");
-        visChip.textContent = invite ? "Privada · invitación" : "Abierta";
-      }
       document.getElementById("title").textContent = s.title || "Evento";
       document.getElementById("when").textContent = s.startsAt
         ? new Date(s.startsAt).toLocaleString("es", {
@@ -664,11 +700,20 @@
       const modChip = document.getElementById("modalityChip");
       if (s.type === "americana" && s.modality) {
         modChip.hidden = false;
+        modChip.className = "chip soft";
         modChip.textContent = modalityLabelFromKey(s.modality);
       } else {
         modChip.hidden = true;
         modChip.textContent = "";
       }
+      const visChip = document.getElementById("visibilityChip");
+      if (visChip) {
+        const invite = String(s.visibility || "public") === "invite";
+        visChip.hidden = false;
+        visChip.className = "chip " + (invite ? "vis-invite" : "vis-open");
+        visChip.textContent = invite ? "Privada · invitación" : "Abierta";
+      }
+      paintHeaderMeta();
       const zone = document.getElementById("zone");
       const venue = document.getElementById("venue");
       const club = (s.venue || "").trim();
@@ -691,6 +736,8 @@
       } else {
         let spots = s.joined + " de " + s.capacity + " plazas";
         if (s.waitlist > 0) spots += " · " + s.waitlist + " reserva";
+        const left = Math.max(0, (s.capacity || 0) - (s.joined || 0));
+        if (left > 0) spots += " · " + left + " libre" + (left === 1 ? "" : "s");
         spotsEl.textContent = spots;
       }
       const minEl = document.getElementById("min");
@@ -797,6 +844,7 @@
     }
 
     function renderAction() {
+      paintHeaderMeta();
       const u = auth && auth.currentUser;
       const google = isGoogle(u);
       const open = eventState && eventState.status === "open";
