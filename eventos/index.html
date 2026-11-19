@@ -826,6 +826,10 @@
         // Filtro extra: en iOS a veces llega respuesta vieja / mezclada
         if ((data.status || "open") !== "open") continue;
         const ev = { id: d.id, ...data };
+        // Por invitación: no listar en Abiertos públicos (sí al dueño)
+        if (String(data.visibility || "public") === "invite" && data.ownerUid !== uid) {
+          continue;
+        }
         // Ya hay resultado publicado → no mostrar en Abiertos; cerrar si soy dueño
         if (await eventAlreadyHasResult(ev)) {
           if (uid && ev.ownerUid === uid) {
