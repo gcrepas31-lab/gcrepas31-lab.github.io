@@ -129,6 +129,25 @@
     .card-wrap.not-joined {
       border-color: rgba(127,127,127,.18);
     }
+    .card-wrap.locked {
+      opacity: .72;
+      filter: grayscale(0.85);
+      border-color: rgba(127,127,127,.28);
+      background: rgba(127,127,127,.08);
+      box-shadow: none;
+    }
+    .card-wrap.locked h2 { color: var(--muted); font-weight: 650; }
+    .card-wrap.locked .invite-lock-hint {
+      margin: 4px 0 0; font-size: .78rem; color: var(--muted); font-weight: 650;
+    }
+    .chip.vis-open {
+      background: rgba(126, 217, 87, .18); color: var(--accent);
+      border: 1px solid rgba(126, 217, 87, .4);
+    }
+    .chip.vis-invite {
+      background: rgba(255, 210, 122, .14); color: var(--warn);
+      border: 1px solid rgba(255, 210, 122, .4);
+    }
     .card-link { display: block; text-decoration: none; color: inherit; }
     .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
     .chip {
@@ -579,12 +598,44 @@
       }, Math.max(1000, align));
     }
 
+    function inviteAccessKey(id) {
+      return "fg_invite_access_" + String(id || "");
+    }
+    function grantInviteAccess(id, token) {
+      const t = String(token || "").trim();
+      if (!id || !t) return;
+      try { localStorage.setItem(inviteAccessKey(id), t); } catch (_) {}
+    }
+    function hasInviteGrant(id, expectedToken) {
+      const expected = String(expectedToken || "").trim();
+      if (!id || !expected) return false;
+      try { return localStorage.getItem(inviteAccessKey(id)) === expected; } catch (_) { return false; }
+    }
+    function hasEventAccess(ev, joined) {
+      if (String(ev.visibility || "public") !== "invite") return true;
+      if (joined) return true;
+      const uid = auth && auth.currentUser && auth.currentUser.uid;
+      if (uid && ev.ownerUid === uid) return true;
+      return hasInviteGrant(ev.id, ev.inviteToken);
+    }
+    // Deep link a Abiertos con ?invite= (raro; /e/ es el camino normal)
+    (function captureInviteFromListUrl() {
+      try {
+        const p = new URLSearchParams(location.search);
+        const id = p.get("id");
+        const inv = p.get("invite");
+        if (id && inv) grantInviteAccess(id, inv);
+      } catch (_) {}
+    })();
+
     function eventCard(ev, opts) {
       opts = opts || {};
       const wrap = document.createElement("div");
       wrap.className = "card-wrap";
       if (opts.joined === true) wrap.classList.add("joined");
       else if (opts.joined === false) wrap.classList.add("not-joined");
+      const locked = opts.locked === true;
+      if (locked) wrap.classList.add("locked");
       const type = ev.type === "torneo" ? "TORNEO" : "AMERICANA";
       const mod = modalityLabel(ev);
       const left = spotsLeft(ev);
@@ -598,10 +649,18 @@
       const place = placeLine(ev);
       const a = document.createElement("a");
       a.className = "card-link";
-      a.href = hrefWithReturn("../e/?id=" + encodeURIComponent(ev.id));
+      let detailHref = "../e/?id=" + encodeURIComponent(ev.id);
+      if (!locked && String(ev.visibility || "public") === "invite" && ev.inviteToken &&
+          hasInviteGrant(ev.id, ev.inviteToken)) {
+        detailHref += "&invite=" + encodeURIComponent(ev.inviteToken);
+      }
+      a.href = hrefWithReturn(detailHref);
       const ownerBadge = opts.ownerBadge
         ? '<span class="chip soft">' + escapeHtml(opts.ownerBadge) + "</span>"
         : "";
+      const visInvite = String(ev.visibility || "public") === "invite";
+      const visChip = '<span class="chip ' + (visInvite ? "vis-invite" : "vis-open") + '">' +
+        (visInvite ? "Privada · invitación" : "Abierta") + "</span>";
       const countdownLabel = formatOpenCountdown(ev.startsAtEpochMs, ev.status);
       const countdownHtml = countdownLabel
         ? '<p class="card-countdown" data-start="' +
@@ -613,6 +672,7 @@
         '<div class="chip-row">' +
           '<span class="chip">' + type + "</span>" +
           (mod ? '<span class="chip soft">' + escapeHtml(mod) + "</span>" : "") +
+          visChip +
           (opts.badge ? '<span class="badge">' + escapeHtml(opts.badge) + "</span>" : "") +
           (opts.joined === true && !opts.badge
             ? '<span class="badge">Inscripto</span>' : "") +
@@ -620,6 +680,9 @@
         '<div class="card-main">' +
           '<div class="card-main-left">' +
             "<h2>" + escapeHtml(ev.title || "Evento") + "</h2>" +
+            (locked
+              ? '<p class="invite-lock-hint">Solo con el link de invitación</p>'
+              : "") +
             (liga ? '<p class="title-sub">' + escapeHtml(liga) + "</p>" : "") +
             '<p class="meta">' + when(ev.startsAtEpochMs) + "</p>" +
             (place ? '<p class="meta">' + escapeHtml(place) + "</p>" : "") +
@@ -826,10 +889,7 @@
         // Filtro extra: en iOS a veces llega respuesta vieja / mezclada
         if ((data.status || "open") !== "open") continue;
         const ev = { id: d.id, ...data };
-        // Por invitación: no listar en Abiertos públicos (sí al dueño)
-        if (String(data.visibility || "public") === "invite" && data.ownerUid !== uid) {
-          continue;
-        }
+        // Invite: se listan todos; sin acceso → card gris (UI). Mail aún no filtra.
         // Ya hay resultado publicado → no mostrar en Abiertos; cerrar si soy dueño
         if (await eventAlreadyHasResult(ev)) {
           if (uid && ev.ownerUid === uid) {
@@ -1124,9 +1184,11 @@
       list.forEach((ev) => {
         const joined = joinedIds.has(ev.id);
         const isOwner = !!(auth.currentUser && ev.ownerUid === auth.currentUser.uid);
+        const access = hasEventAccess(ev, joined);
         listEl.appendChild(eventCard(ev, {
           leagueMap,
           joined,
+          locked: !access,
           badge: joined ? "Inscripto" : "",
           ownerBadge: isOwner ? "Creador" : "",
         }));

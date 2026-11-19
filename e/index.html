@@ -95,6 +95,16 @@
       background: var(--chip); color: #fff; font-size: .7rem; font-weight: 700;
       letter-spacing: .04em; padding: 3px 9px; border-radius: 999px;
     }
+    .chip.vis-open {
+      background: rgba(126, 217, 87, .18); color: var(--accent);
+      border: 1px solid rgba(126, 217, 87, .4);
+      font-weight: 650; letter-spacing: 0;
+    }
+    .chip.vis-invite {
+      background: rgba(255, 210, 122, .14); color: var(--warn);
+      border: 1px solid rgba(255, 210, 122, .4);
+      font-weight: 650; letter-spacing: 0;
+    }
     .chip.soft {
       background: transparent; color: var(--muted); border: 1px solid var(--line);
       font-weight: 650; letter-spacing: 0;
@@ -302,6 +312,7 @@
       <div class="card-head">
         <span class="chip" id="typeChip">EVENTO</span>
         <span class="chip soft" id="modalityChip" hidden></span>
+        <span class="chip" id="visibilityChip" hidden></span>
         <strong class="brand">Fixture<span class="go">Go</span></strong>
       </div>
       <div class="body">
@@ -410,18 +421,37 @@
 
     const params = new URLSearchParams(location.search);
     let eventId = params.get("id");
+    const inviteFromUrl = (params.get("invite") || "").trim();
     if (!eventId) {
       const parts = location.pathname.split("/").filter(Boolean);
       const i = parts.indexOf("e");
       if (i >= 0 && parts[i + 1] && parts[i + 1] !== "index.html") eventId = parts[i + 1];
     }
 
+    function inviteAccessKey(id) {
+      return "fg_invite_access_" + String(id || "");
+    }
+    function grantInviteAccess(id, token) {
+      const t = String(token || "").trim();
+      if (!id || !t) return;
+      try { localStorage.setItem(inviteAccessKey(id), t); } catch (_) {}
+    }
+    function grantedInviteToken(id) {
+      try { return localStorage.getItem(inviteAccessKey(id)) || ""; } catch (_) { return ""; }
+    }
+    if (eventId && inviteFromUrl) grantInviteAccess(eventId, inviteFromUrl);
+
     const cfg = window.FIXTUREGO_FIREBASE;
     const ready = cfg && cfg.apiKey && cfg.apiKey !== "YOUR_API_KEY" && cfg.projectId;
 
-    const deepHttps = eventId
-      ? "https://fixturego.com/e/?id=" + encodeURIComponent(eventId)
-      : "https://fixturego.com/";
+    function deepLinkForApp() {
+      if (!eventId) return "https://fixturego.com/";
+      let u = "https://fixturego.com/e/?id=" + encodeURIComponent(eventId);
+      const tok = inviteFromUrl || grantedInviteToken(eventId);
+      if (tok) u += "&invite=" + encodeURIComponent(tok);
+      return u;
+    }
+    const deepHttps = deepLinkForApp();
     const playStore =
       "https://play.google.com/store/apps/details?id=com.gopadel.americano";
     const ua = navigator.userAgent || "";
@@ -438,9 +468,10 @@
     openApp.addEventListener("click", (e) => {
       if (!isAndroid || !eventId) return; // href → Play Store
       e.preventDefault();
+      const path = deepHttps.replace(/^https:\/\//, "");
       // Intent: abre la app si está instalada; si no, Play Store.
       window.location.href =
-        "intent://fixturego.com/e/?id=" + encodeURIComponent(eventId) +
+        "intent://" + path +
         "#Intent;scheme=https;package=com.gopadel.americano;" +
         "S.browser_fallback_url=" + encodeURIComponent(playStore) + ";end";
     });
@@ -615,6 +646,13 @@
       const closed = s.status !== "open";
       document.getElementById("typeChip").textContent =
         s.type === "torneo" ? "TORNEO" : "AMERICANA";
+      const visChip = document.getElementById("visibilityChip");
+      if (visChip) {
+        const invite = String(s.visibility || "public") === "invite";
+        visChip.hidden = false;
+        visChip.className = "chip " + (invite ? "vis-invite" : "vis-open");
+        visChip.textContent = invite ? "Privada · invitación" : "Abierta";
+      }
       document.getElementById("title").textContent = s.title || "Evento";
       document.getElementById("when").textContent = s.startsAt
         ? new Date(s.startsAt).toLocaleString("es", {
@@ -807,6 +845,17 @@
         return;
       }
 
+      if (!hasEventAccess(eventState) && !myStatus) {
+        actionEl.classList.add("panel");
+        actionTitle.textContent = "Evento privado";
+        actionSub.textContent =
+          "Necesitás el link de invitación para anotarte. El organizador te lo puede compartir.";
+        primaryBtn.hidden = true;
+        nickWrap.hidden = true;
+        leaveBtn.hidden = true;
+        return;
+      }
+
       if (!google) {
         actionEl.classList.add("panel");
         actionTitle.textContent = "Entrá para inscribirte";
@@ -908,6 +957,11 @@
       const snap = await getDoc(doc(db, "open_events", id));
       if (!snap.exists()) return null;
       const d = snap.data();
+      const inviteToken = (d.inviteToken || "").trim();
+      // Validar token del link contra el del doc; grant solo si coincide (o aún no hay token en URL)
+      if (inviteFromUrl && inviteToken && inviteFromUrl === inviteToken) {
+        grantInviteAccess(id, inviteToken);
+      }
       return {
         id,
         type: d.type || "americana",
@@ -925,7 +979,22 @@
         localEventoId: d.localEventoId || "",
         serieNombre: d.serieNombre || "",
         jornada: d.jornada || 0,
+        visibility: d.visibility || "public",
+        inviteToken: inviteToken || null,
+        ownerUid: d.ownerUid || "",
+        allowedEmails: Array.isArray(d.allowedEmails) ? d.allowedEmails : [],
       };
+    }
+
+    function hasEventAccess(ev) {
+      if (!ev) return true;
+      if (String(ev.visibility || "public") !== "invite") return true;
+      if (myStatus) return true;
+      const uid = auth && auth.currentUser && auth.currentUser.uid;
+      if (uid && ev.ownerUid === uid) return true;
+      const expected = String(ev.inviteToken || "").trim();
+      if (!expected) return false;
+      return grantedInviteToken(ev.id) === expected;
     }
 
     async function loadResultForEvent(ev) {
@@ -1064,6 +1133,10 @@
     async function joinEvent() {
       const u = auth && auth.currentUser;
       if (!isGoogle(u) || busy) return;
+      if (!hasEventAccess(eventState)) {
+        showMsg("Necesitás el link de invitación para anotarte.", true);
+        return;
+      }
       const name = readNick();
       if (!name) {
         showMsg("Elegí un nombre para la lista.", true);
