@@ -160,6 +160,19 @@
       margin: 16px 0 0; font-size: .88rem; font-weight: 800; color: var(--muted);
     }
 
+    .movements {
+      margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
+    }
+    .movements h3 {
+      margin: 0 0 10px; font-size: .95rem; font-weight: 800; color: var(--text);
+    }
+    .movements ul { list-style: none; margin: 0; padding: 0; }
+    .movements li {
+      font-size: .9rem; color: var(--muted); line-height: 1.45;
+      padding: 4px 0;
+    }
+    .movements .empty { margin: 0; font-size: .88rem; color: var(--muted); }
+
     .finished {
       margin-top: 18px; padding: 16px 14px; border-radius: 14px;
       border: 1px solid rgba(126, 217, 87, .35);
@@ -320,6 +333,12 @@
           <ul id="waitList"></ul>
         </div>
 
+        <div class="movements" id="movementsBox" hidden>
+          <h3>Movimientos</h3>
+          <ul id="movementsList"></ul>
+          <p class="empty" id="movementsEmpty" hidden>Todavía no hay altas ni bajas.</p>
+        </div>
+
         <div class="footer" style="display:flex;flex-direction:column;gap:10px;align-items:center">
           <button type="button" class="linkish" id="shareBtn" style="color:var(--accent);font-weight:700">
             Compartir por WhatsApp
@@ -339,7 +358,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, collection, getDocs, setDoc, updateDoc, deleteDoc,
-      writeBatch,
+      addDoc, writeBatch,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       niceName, greetName, initial, applySavedTheme, setStoredName, getStoredName,
@@ -847,9 +866,89 @@
       return list;
     }
 
+    async function loadMovements() {
+      try {
+        const snap = await getDocs(collection(db, "open_events", eventId, "movements"));
+        const list = [];
+        snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+        return list.sort((a, b) => (b.atEpochMs || 0) - (a.atEpochMs || 0)).slice(0, 40);
+      } catch (e) {
+        console.warn("movements", e);
+        return [];
+      }
+    }
+
+    function formatMovementWhen(ms) {
+      if (!ms) return "—";
+      const d = new Date(ms);
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+      const sameDay = (a, b) =>
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate();
+      if (sameDay(d, now)) return hm;
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      if (sameDay(d, y)) return "ayer " + hm;
+      const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+      return d.getDate() + " " + months[d.getMonth()] + " " + hm;
+    }
+
+    function movementLine(m) {
+      const name = (m.displayName || "Alguien").trim() || "Alguien";
+      const when = formatMovementWhen(m.atEpochMs);
+      const action = m.action || "joined";
+      if (action === "left") return name + " se bajó · " + when;
+      if (action === "waitlist") return name + " entró en reserva · " + when;
+      if (action === "promoted") return name + " pasó a plaza · " + when;
+      return name + " se apuntó · " + when;
+    }
+
+    function renderMovements(list) {
+      const box = document.getElementById("movementsBox");
+      const ul = document.getElementById("movementsList");
+      const empty = document.getElementById("movementsEmpty");
+      if (!box || !ul || !empty) return;
+      box.hidden = false;
+      ul.innerHTML = "";
+      if (!list || !list.length) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      list.forEach((m) => {
+        const li = document.createElement("li");
+        li.textContent = movementLine(m);
+        ul.appendChild(li);
+      });
+    }
+
+    async function recordMovement(payload) {
+      const u = auth && auth.currentUser;
+      if (!u || !eventId) return;
+      const name = String(payload.displayName || "").trim().slice(0, 79);
+      const uid = String(payload.uid || "").trim();
+      const action = payload.action;
+      if (!name || !uid || !action) return;
+      try {
+        await addDoc(collection(db, "open_events", eventId, "movements"), {
+          uid,
+          displayName: name,
+          action,
+          atEpochMs: Date.now(),
+          byUid: u.uid,
+        });
+      } catch (e) {
+        console.warn("recordMovement", e);
+      }
+    }
+
     async function refreshMineAndRoster() {
       const signups = await loadSignups();
       renderRoster(signups);
+      renderMovements(await loadMovements());
       const u = auth && auth.currentUser;
       myStatus = null;
       if (isGoogle(u)) {
@@ -915,6 +1014,11 @@
         const joinedCount = fresh.joined + (status === "confirmed" ? 1 : 0);
         const waitlistCount = fresh.waitlist + (status === "waitlist" ? 1 : 0);
         await updateDoc(doc(db, "open_events", eventId), { joinedCount, waitlistCount });
+        await recordMovement({
+          uid: u.uid,
+          displayName: name,
+          action: status === "waitlist" ? "waitlist" : "joined",
+        });
         eventState = { ...fresh, joined: joinedCount, waitlist: waitlistCount };
         fillEvent(eventState);
         myStatus = status;
@@ -997,7 +1101,13 @@
           );
         }
         const wasConfirmed = data.status !== "waitlist";
+        const leftName = (data.displayName || greetName(u) || "Alguien").trim();
         await deleteDoc(doc(db, "open_events", eventId, "signups", signupUid));
+        await recordMovement({
+          uid: signupUid,
+          displayName: leftName,
+          action: "left",
+        });
         let remaining = await loadSignups();
         if (wasConfirmed) {
           const firstWait = remaining
@@ -1014,6 +1124,11 @@
                   ? { ...s, status: "confirmed" }
                   : s
               );
+              await recordMovement({
+                uid: firstWait.uid || firstWait.id,
+                displayName: firstWait.displayName || "Alguien",
+                action: "promoted",
+              });
             } catch (pe) {
               console.warn("promote", pe);
             }
@@ -1030,6 +1145,7 @@
           fillEvent(eventState);
         }
         renderRoster(remaining);
+        renderMovements(await loadMovements());
         renderAction();
         showMsg("Te borraste del evento.", false);
       } catch (e) {

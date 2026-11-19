@@ -336,7 +336,7 @@
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import {
       getFirestore, collection, query, where, orderBy, getDocs, getDoc, doc,
-      collectionGroup, deleteDoc, updateDoc, setDoc,
+      collectionGroup, deleteDoc, updateDoc, setDoc, addDoc,
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     import {
       niceName, greetName, initial, getStoredName, setStoredName,
@@ -619,6 +619,26 @@
       }
     }
 
+    async function recordEventMovement(eventId, payload) {
+      const u = auth && auth.currentUser;
+      if (!u || !eventId) return;
+      const name = String(payload.displayName || "").trim().slice(0, 79);
+      const uid = String(payload.uid || "").trim();
+      const action = payload.action;
+      if (!name || !uid || !action) return;
+      try {
+        await addDoc(collection(db, "open_events", eventId, "movements"), {
+          uid,
+          displayName: name,
+          action,
+          atEpochMs: Date.now(),
+          byUid: u.uid,
+        });
+      } catch (e) {
+        console.warn("recordEventMovement", e);
+      }
+    }
+
     async function promoteFirstWaitlist(eventId, remaining) {
       const wait = remaining
         .filter((s) => s.status === "waitlist")
@@ -628,6 +648,11 @@
       try {
         await updateDoc(doc(db, "open_events", eventId, "signups", first.uid || first.id), {
           status: "confirmed",
+        });
+        await recordEventMovement(eventId, {
+          uid: first.uid || first.id,
+          displayName: first.displayName || "Alguien",
+          action: "promoted",
         });
         return remaining.map((s) =>
           (s.uid || s.id) === (first.uid || first.id)
@@ -649,8 +674,15 @@
         const signupRef = doc(db, "open_events", eventId, "signups", u.uid);
         const mine = await getDoc(signupRef);
         if (!mine.exists()) throw new Error("No encontramos tu inscripción.");
-        const wasConfirmed = mine.data().status !== "waitlist";
+        const data = mine.data() || {};
+        const wasConfirmed = data.status !== "waitlist";
+        const leftName = (data.displayName || greetName(u) || "Alguien").trim();
         await deleteDoc(signupRef);
+        await recordEventMovement(eventId, {
+          uid: u.uid,
+          displayName: leftName,
+          action: "left",
+        });
         let snap = await getDocs(collection(db, "open_events", eventId, "signups"));
         let remaining = [];
         snap.forEach((d) => remaining.push({ id: d.id, ...d.data() }));
