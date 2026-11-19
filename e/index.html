@@ -163,9 +163,19 @@
     .movements {
       margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
     }
-    .movements h3 {
-      margin: 0 0 10px; font-size: .95rem; font-weight: 800; color: var(--text);
+    .movements-toggle {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; margin: 0; padding: 0; border: 0; background: transparent;
+      color: var(--text); cursor: pointer; text-align: left;
+      font: inherit; font-size: .95rem; font-weight: 800;
     }
+    .movements-toggle .chevron {
+      flex-shrink: 0; font-size: 1.15rem; line-height: 1; color: var(--muted);
+      transition: transform .15s ease;
+    }
+    .movements.open .movements-toggle .chevron { transform: rotate(180deg); }
+    .movements-body { margin-top: 10px; }
+    .movements:not(.open) .movements-body { display: none; }
     .movements ul { list-style: none; margin: 0; padding: 0; }
     .movements li {
       font-size: .9rem; color: var(--muted); line-height: 1.45;
@@ -334,9 +344,15 @@
         </div>
 
         <div class="movements" id="movementsBox" hidden>
-          <h3>Movimientos</h3>
-          <ul id="movementsList"></ul>
-          <p class="empty" id="movementsEmpty" hidden>Todavía no hay altas ni bajas.</p>
+          <button type="button" class="movements-toggle" id="movementsToggle"
+                  aria-expanded="false" aria-controls="movementsBody">
+            <span>Movimientos</span>
+            <span class="chevron" aria-hidden="true">▾</span>
+          </button>
+          <div class="movements-body" id="movementsBody">
+            <ul id="movementsList"></ul>
+            <p class="empty" id="movementsEmpty" hidden>Todavía no hay altas ni bajas.</p>
+          </div>
         </div>
 
         <div class="footer" style="display:flex;flex-direction:column;gap:10px;align-items:center">
@@ -924,6 +940,17 @@
         ul.appendChild(li);
       });
     }
+
+    (function bindMovementsToggle() {
+      const box = document.getElementById("movementsBox");
+      const toggle = document.getElementById("movementsToggle");
+      if (!box || !toggle || toggle.dataset.bound) return;
+      toggle.dataset.bound = "1";
+      toggle.addEventListener("click", () => {
+        const open = box.classList.toggle("open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    })();
 
     async function recordMovement(payload) {
       const u = auth && auth.currentUser;
